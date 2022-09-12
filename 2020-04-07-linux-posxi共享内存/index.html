@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="内存映射文件内存映射文件（Memory-mapped file），或称“文件映射”、“映射文件”，是一段虚内存逐字节对应于一个文件或类文件的资源，使得应用程序处理映射部分如同访问主内存。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="linux-posix共享内存">
+<meta property="og:url" content="https://riverferry.site/2020-04-07-linux-posxi%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="内存映射文件内存映射文件（Memory-mapped file），或称“文件映射”、“映射文件”，是一段虚内存逐字节对应于一个文件或类文件的资源，使得应用程序处理映射部分如同访问主内存。">
+<meta property="og:locale">
+<meta property="og:image" content="https://i.loli.net/2020/04/11/IVx7c6vk3joMRtd.png">
+<meta property="og:image" content="https://i.loli.net/2020/04/11/eqV7fJwZi2MyjTR.png">
+<meta property="og:image" content="https://i.loli.net/2020/04/11/QYGbd4MqTfvOgmK.jpg">
+<meta property="article:published_time" content="2020-04-07T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.280Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="ipc">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/04/11/IVx7c6vk3joMRtd.png">
+
+<link rel="canonical" href="https://riverferry.site/2020-04-07-linux-posxi%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>linux-posix共享内存 | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2020-04-07-linux-posxi%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          linux-posix共享内存
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-04-07 00:00:00" itemprop="dateCreated datePublished" datetime="2020-04-07T00:00:00+00:00">2020-04-07</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>6.3k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>6 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="内存映射文件"><a href="#内存映射文件" class="headerlink" title="内存映射文件"></a>内存映射文件</h2><p>内存映射文件（Memory-mapped file），或称“文件映射”、“映射文件”，是一段虚内存逐字节对应于一个文件或类文件的资源，使得应用程序处理映射部分如同访问主内存。</p>
+<a id="more"></a>
+
+<p>主要用处是增加I/O性能，特别是用于大文件。对于小文件，内存映射文件会导致碎片空间浪费，[1]因为内存映射总是要对齐页边界，这起码是4 KiB。因而一个5 KiB文件将会映射占用8 KiB内存，浪费了3 KiB内存。访问内存映射文件比直接文件读写要快几个数量级。</p>
+<p>内存映射文件可以只加载一部分内容到用户的逻辑内存空间。这对非常大的文件特别有用。</p>
+<p>使用内存映射文件可以避免颠簸：把相当大的文件直接加载到内存时，由于可用内存不足，使得一边读取文件内存，同时把部分已经加载的文件从内存写入硬盘虚存文件中。</p>
+<p>内存映射文件由操作系统的内存管理程序负责，因此绕过了硬盘虚存的分页文件（page file）。[2]</p>
+<h2 id="mmap函数"><a href="#mmap函数" class="headerlink" title="mmap函数"></a>mmap函数</h2><pre><code>//用户空间函数
+void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset);
+
+//内核空间函数
+int mmap(struct file *filp, struct vm_area_struct *vma)</code></pre>
+<p>概念类的在之前的那篇文章已经写过了，这里把一些细致的点再梳理下。先看看函数参数：</p>
+<p><strong>start:</strong> 指定被映射到的进程内空间的起始地址。它通常被指定为一个空指针，这样告诉内核自己去选择起始地址。无论哪种情况下，该函数的返回值都是描述符fd所映射到内存的起始地址.</p>
+<p><strong>len:</strong> 是映射到调用进程地址空间中的字节数，它从被映射文件开头第offset个字节处开始算.offset通常被被设置为0</p>
+<p><strong>prot:</strong> 内存映射区的保护由prot参数指定.</p>
+<table>
+    <thead align="center">
+        <tr>
+            <th style="text-align:center">prot</th>
+            <th style="text-align:center">说明</th>
+        </tr>
+    </thead>
+    <tbody align="center">
+        <tr>
+            <td>PROT_READ</td>
+            <td>数据可读</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>PROT_WRITE</td>
+            <td>数据可写</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>PROT_EXEC</td>
+            <td>数据可执行</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>PROT_NONE</td>
+            <td>数据不可访问</td>
+        </tr>
+    </tbody>
+</table>
+
+<p><strong>flags:</strong> MAP_SHARED和MAP_PRAVITE必须指定一个，并可有选择的或上MAP_FIXED</p>
+<p>MAP_PRIVATE：映射区域的修改只对当前进程有效，修改的时候类似写时复制，会拷贝一个映射区域的副本。如果内存不足，该区域将正常交换。由于私有映射在写入时会有效地还原为普通内存，因此，如果将此模式配合使用，则必须具有足够的虚拟内存来存储整个映射区域</p>
+<p>MAP_SHARED：对映射区域的修改对所有共享的进程有效，实际是直接修改映射区在内存raw中的值，并且会写回到底层对象(文件)中，但不一定及时写。如果底层对象是只读打开，则会出现问题。</p>
+<p>从移植性上考虑，MAP_FIXED不应该指定。如果没有指定该标志，但是start不是一个空指针，那么start如何处置取决于实现。不为空的start值通常被当作有关该内存区应如何具体定位的线索。可移植的代码应把start指定成一个空指针，并且不指定MAP_FIXED</p>
+<table>
+    <thead align="center">
+        <tr>
+            <th style="text-align:center">flags</th>
+            <th style="text-align:center">说明</th>
+        </tr>
+    </thead>
+    <tbody align="center">
+        <tr>
+            <td>MAP_SHARED</td>
+            <td>变动是共享的</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>MAP_PRIVATE</td>
+            <td>变动是私自的</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>MAP_ANONYMOUS</td>
+            <td>建立匿名映射,此时会忽略参数fd</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>MAP_FIXED</td>
+            <td>准确的解释start参数</td>
+        </tr>
+    </tbody>
+</table>
+
+<p><strong>fd:</strong> 文件描述符，可以为-1.表示匿名映射</p>
+<p><strong>offset:</strong> 偏移值，从文件的起始位置偏移多少字节</p>
+<p><img src="https://i.loli.net/2020/04/11/IVx7c6vk3joMRtd.png" alt="mmap图示.png"></p>
+<h2 id="mmap分类"><a href="#mmap分类" class="headerlink" title="mmap分类"></a>mmap分类</h2><ul>
+<li>使用普通文件以提供内存映射IO</li>
+<li>使用特殊文件提供匿名内存映射</li>
+<li>使用shm_open提供无亲缘进程间的Posix共享内存区(和第一种差不多)</li>
+</ul>
+<h2 id="匿名内存映射"><a href="#匿名内存映射" class="headerlink" title="匿名内存映射"></a>匿名内存映射</h2><p>看下程序启动阶段的mmap: <br></p>
+<pre><code>mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f7484b16000</code></pre>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/mman.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/wait.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> std;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span> *ptr = <span class="keyword">static_cast</span>&lt;<span class="keyword">int</span>*&gt;(<span class="built_in">mmap</span>(<span class="literal">NULL</span>, <span class="built_in"><span class="keyword">sizeof</span></span>(<span class="keyword">int</span>), PROT_READ | </span><br><span class="line">        PROT_WRITE, MAP_PRIVATE | MAP_ANON, <span class="number">-1</span>, <span class="number">0</span>));</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* int *ptr = static_cast&lt;int*&gt;(mmap(NULL, sizeof(int), </span></span><br><span class="line"><span class="comment">        PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANON, -1, 0)); */</span></span><br><span class="line"></span><br><span class="line">	*ptr = <span class="number">100</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">pid_t</span> pid = fork();</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (pid == <span class="number">0</span>)</span><br><span class="line">	&#123;</span><br><span class="line">		cout &lt;&lt; <span class="string">&quot;child:&quot;</span> &lt;&lt; endl;</span><br><span class="line">		cout &lt;&lt; ptr &lt;&lt; endl;</span><br><span class="line">		cout &lt;&lt; *ptr &lt;&lt; endl;</span><br><span class="line">		*ptr = <span class="number">200</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">else</span> <span class="keyword">if</span> (pid &gt; <span class="number">0</span>)</span><br><span class="line">	&#123;	</span><br><span class="line">		<span class="built_in">sleep</span>(<span class="number">2</span>);</span><br><span class="line">		cout &lt;&lt; <span class="string">&quot;parent:&quot;</span> &lt;&lt; endl;</span><br><span class="line">		cout &lt;&lt; ptr &lt;&lt; endl;</span><br><span class="line">		cout &lt;&lt; *ptr &lt;&lt; endl;</span><br><span class="line">		<span class="built_in">wait</span>(<span class="literal">nullptr</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p><code>MAP_PRIVATE</code></p>
+<pre><code>child:
+0x7f09d5b71000
+100
+parent:
+0x7f09d5b71000
+100</code></pre>
+<p><code>MAP_SHARED</code></p>
+<pre><code>child:
+0x7fba08864000
+100
+parent:
+0x7fba08864000
+200</code></pre>
+<h2 id="实现匿名映射："><a href="#实现匿名映射：" class="headerlink" title="实现匿名映射："></a>实现匿名映射：</h2><p>有的系统可能不支持匿名映射，可以通过open /dev/zero来自己实现.</p>
+<p>/dev/zero在类UNIX系统中是一个特殊的设备文件，当你读它的时候，它会提供无限的空字符（NULL, ASCII NUL, 0x00）。其中的一个典型用法是用它提供的字符流来覆盖信息，另一个常见用法是产生一个特定大小的空白文件。BSD就是通过mmap把/dev/zero映射到虚地址空间实现共享内存的。可以使用mmap将/dev/zero映射到一个虚拟的内存空间，这个操作的效果等同于使用一段匿名的内存（没有和任何文件相关）。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/mman.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/wait.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/fcntl.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> std;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span> fd = <span class="built_in">open</span>(<span class="string">&quot;/dev/zero&quot;</span>, O_RDWR);</span><br><span class="line">	<span class="keyword">if</span> (fd &lt; <span class="number">0</span>)</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">int</span> *ptr = <span class="keyword">static_cast</span>&lt;<span class="keyword">int</span>*&gt;(<span class="built_in">mmap</span>(<span class="literal">NULL</span>, <span class="built_in"><span class="keyword">sizeof</span></span>(<span class="keyword">int</span>), PROT_READ | PROT_WRITE, </span><br><span class="line">        MAP_SHARED , fd, <span class="number">0</span>));</span><br><span class="line">	*ptr = <span class="number">100</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">pid_t</span> pid = fork();</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (pid == <span class="number">0</span>)</span><br><span class="line">	&#123;</span><br><span class="line">		cout &lt;&lt; <span class="string">&quot;child:&quot;</span> &lt;&lt; endl;</span><br><span class="line">		cout &lt;&lt; ptr &lt;&lt; endl;</span><br><span class="line">		cout &lt;&lt; *ptr &lt;&lt; endl;</span><br><span class="line">		*ptr = <span class="number">200</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">else</span> <span class="keyword">if</span> (pid &gt; <span class="number">0</span>)</span><br><span class="line">	&#123;	</span><br><span class="line">		<span class="built_in">sleep</span>(<span class="number">2</span>);</span><br><span class="line">		cout &lt;&lt; <span class="string">&quot;parent:&quot;</span> &lt;&lt; endl;</span><br><span class="line">		cout &lt;&lt; ptr &lt;&lt; endl;</span><br><span class="line">		cout &lt;&lt; *ptr &lt;&lt; endl;</span><br><span class="line">		<span class="built_in">wait</span>(<span class="literal">nullptr</span>);</span><br><span class="line">		<span class="built_in">pause</span>();</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p><img src="https://i.loli.net/2020/04/11/eqV7fJwZi2MyjTR.png" alt="zero.png"></p>
+<h2 id="posix共享内存"><a href="#posix共享内存" class="headerlink" title="posix共享内存"></a>posix共享内存</h2><p>posix共享内存的实现也是映射文件，不过会给文件路径加上前缀：/dev/shm/. <br><br>从使用上来说就是把open替换成shm_open,不过shm_open内部还是调用了open,花里胡哨的</p>
+<p><strong>shm_open</strong></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span>	_PATH_DEV	<span class="meta-string">&quot;/dev/&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SHMDIR	(_PATH_DEV <span class="meta-string">&quot;shm/&quot;</span>)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* Open shared memory object.  */</span></span><br><span class="line"><span class="keyword">int</span></span><br><span class="line">shm_open (<span class="keyword">const</span> <span class="keyword">char</span> *name, <span class="keyword">int</span> oflag, <span class="keyword">mode_t</span> mode)</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">size_t</span> namelen;</span><br><span class="line">  <span class="keyword">char</span> *fname;</span><br><span class="line">  <span class="keyword">int</span> fd;</span><br><span class="line"></span><br><span class="line">  <span class="comment">/* Construct the filename.  */</span></span><br><span class="line">  <span class="keyword">while</span> (name[<span class="number">0</span>] == <span class="string">&#x27;/&#x27;</span>)</span><br><span class="line">    ++name;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (name[<span class="number">0</span>] == <span class="string">&#x27;\0&#x27;</span>)</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="comment">/* The name &quot;/&quot; is not supported.  */</span></span><br><span class="line">      __set_errno (EINVAL);</span><br><span class="line">      <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">  namelen = <span class="built_in">strlen</span> (name);</span><br><span class="line">  fname = (<span class="keyword">char</span> *) __alloca (<span class="keyword">sizeof</span> SHMDIR - <span class="number">1</span> + namelen + <span class="number">1</span>);</span><br><span class="line">  __mempcpy (__mempcpy (fname, SHMDIR, <span class="keyword">sizeof</span> SHMDIR - <span class="number">1</span>),</span><br><span class="line">	     name, namelen + <span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">  fd = open (name, oflag, mode);</span><br><span class="line">  <span class="keyword">if</span> (fd != <span class="number">-1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="comment">/* We got a descriptor.  Now set the FD_CLOEXEC bit.  */</span></span><br><span class="line">      <span class="keyword">int</span> flags = fcntl (fd, F_GETFD, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">if</span> (__builtin_expect (flags, <span class="number">0</span>) != <span class="number">-1</span>)</span><br><span class="line">	&#123;</span><br><span class="line">	  flags |= FD_CLOEXEC;</span><br><span class="line">	  flags = fcntl (fd, F_SETFD, flags);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">if</span> (flags == <span class="number">-1</span>)</span><br><span class="line">	&#123;</span><br><span class="line">	  <span class="comment">/* Something went wrong.  We cannot return the descriptor.  */</span></span><br><span class="line">	  <span class="keyword">int</span> save_errno = errno;</span><br><span class="line">	  close (fd);</span><br><span class="line">	  fd = <span class="number">-1</span>;</span><br><span class="line">	  __set_errno (save_errno);</span><br><span class="line">	&#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> fd;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p><strong>测试程序</strong></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/mman.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;time.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> std;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="comment">//shm_unlink(&quot;/ShareMemory&quot;);</span></span><br><span class="line">	<span class="keyword">int</span> fd = <span class="built_in">shm_open</span>(<span class="string">&quot;/ShareMemory&quot;</span>, O_RDWR |  O_CREAT , <span class="number">0</span>);</span><br><span class="line">	<span class="keyword">if</span> (fd &lt; <span class="number">0</span>)</span><br><span class="line">		cout &lt;&lt; fd &lt;&lt; endl;</span><br><span class="line">	<span class="built_in">ftruncate</span>(fd, <span class="number">1024</span>);	</span><br><span class="line"></span><br><span class="line">	<span class="keyword">char</span> s[<span class="number">1024</span>] = &#123;<span class="number">0</span>&#125;;</span><br><span class="line">	<span class="keyword">char</span> *ptr = <span class="keyword">static_cast</span>&lt;<span class="keyword">char</span>*&gt;(<span class="built_in">mmap</span>(<span class="literal">NULL</span>, <span class="number">1024</span>, PROT_READ | PROT_WRITE,</span><br><span class="line">         MAP_SHARED, fd, <span class="number">0</span> ));</span><br><span class="line">	cout &lt;&lt; ptr &lt;&lt; endl;</span><br><span class="line">	<span class="keyword">time_t</span> ti = <span class="built_in">time</span>(&amp;ti);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">tm</span> *<span class="title">ptm</span> =</span> <span class="literal">nullptr</span>;</span><br><span class="line">	ptm = <span class="built_in">localtime</span>(&amp;ti);</span><br><span class="line">	<span class="built_in">strftime</span>(s, <span class="number">1024</span>, <span class="string">&quot;%Y %m %d %H %M %S&quot;</span>, ptm);</span><br><span class="line">	<span class="built_in">strcat</span>(ptr, s);</span><br><span class="line">	<span class="built_in">strcat</span>(ptr, <span class="string">&quot;\n&quot;</span>);	</span><br><span class="line">	cout &lt;&lt; <span class="string">&quot;ok&quot;</span> &lt;&lt; endl;</span><br><span class="line">	<span class="built_in">close</span>(fd);</span><br><span class="line">	<span class="comment">//shm_unlink(&quot;/ShareMemory&quot;);</span></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<pre><code>[root@localhost ~]# ./a.out 
+
+2020 04 11 22 54 59
+2020 04 11 22 55 00
+2020 04 11 22 55 01
+2020 04 11 22 55 08
+2020 04 11 22 55 08
+2020 04 11 22 55 09
+2020 04 11 22 55 49
+2020 04 11 22 55 50
+
+ok
+[root@localhost ~]# ./a.out 
+
+2020 04 11 22 54 59
+2020 04 11 22 55 00
+2020 04 11 22 55 01
+2020 04 11 22 55 08
+2020 04 11 22 55 08
+2020 04 11 22 55 09
+2020 04 11 22 55 49
+2020 04 11 22 55 50
+2020 04 11 22 56 19
+
+ok
+[root@localhost ~]# ./a.out 
+
+2020 04 11 22 54 59
+2020 04 11 22 55 00
+2020 04 11 22 55 01
+2020 04 11 22 55 08
+2020 04 11 22 55 08
+2020 04 11 22 55 09
+2020 04 11 22 55 49
+2020 04 11 22 55 50
+2020 04 11 22 56 19
+2020 04 11 22 56 31
+
+ok
+
+[root@localhost shm]# pwd
+/dev/shm
+[root@localhost shm]# ls -lrt
+总用量 24
+-rw------- 1 postgres postgres 19916 4月  11 17:28 PostgreSQL.1900869883
+---------- 1 root     root      1024 4月  11 22:56 ShareMemory
+
+[root@localhost shm]# cat ShareMemory 
+
+2020 04 11 22 54 59
+2020 04 11 22 55 00
+2020 04 11 22 55 01
+2020 04 11 22 55 08
+2020 04 11 22 55 08
+2020 04 11 22 55 09
+2020 04 11 22 55 49
+2020 04 11 22 55 50
+2020 04 11 22 56 19
+2020 04 11 22 56 31
+2020 04 11 22 56 32</code></pre>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ul>
+<li>MAP_PRIVATE会创建内存副本，只对单个进程有效，不可用于共享</li>
+<li>MAP_SHARED在内存只有一个映射对象，修改对所有共享进程生效。并且修改后会写入底层对象(文件)中</li>
+<li>mmap匿名文件映射fd赋值-1, flag或上MAP_ANON.或者通过/dev/zero自己实现</li>
+<li>shm_open作为posix标准的共享内存实现，内部也是open打开文件/dev/shm/youfilename来实现的</li>
+<li>编译的时候 -lrt</li>
+</ul>
+<h2 id="ending"><a href="#ending" class="headerlink" title="ending"></a>ending</h2><p><img src="https://i.loli.net/2020/04/11/QYGbd4MqTfvOgmK.jpg" alt="69810542_p0_master1200.jpg"></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2020-04-07-linux-posxi%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/" title="linux-posix共享内存">https://riverferry.site/2020-04-07-linux-posxi共享内存/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/ipc/" rel="tag"><i class="fa fa-tags"></i> ipc</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020-04-07-linux-spinlock/" rel="prev" title="linux-spinlock">
+      <i class="fa fa-chevron-left"></i> linux-spinlock
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020-04-07-linux-1%E5%8F%B7%E8%BF%9B%E7%A8%8B/" rel="next" title="1号进程">
+      1号进程 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84%E6%96%87%E4%BB%B6"><span class="nav-number">1.</span> <span class="nav-text">内存映射文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#mmap%E5%87%BD%E6%95%B0"><span class="nav-number">2.</span> <span class="nav-text">mmap函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#mmap%E5%88%86%E7%B1%BB"><span class="nav-number">3.</span> <span class="nav-text">mmap分类</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8C%BF%E5%90%8D%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84"><span class="nav-number">4.</span> <span class="nav-text">匿名内存映射</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E5%8C%BF%E5%90%8D%E6%98%A0%E5%B0%84%EF%BC%9A"><span class="nav-number">5.</span> <span class="nav-text">实现匿名映射：</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#posix%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98"><span class="nav-number">6.</span> <span class="nav-text">posix共享内存</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">7.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ending"><span class="nav-number">8.</span> <span class="nav-text">ending</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : '9d910e89fb6b9b5ff28c48b954aebe32',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

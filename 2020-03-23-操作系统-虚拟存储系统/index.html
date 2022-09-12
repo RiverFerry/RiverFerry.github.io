@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="参考虚拟内存的那点事儿 陈向群操作系统">
+<meta property="og:type" content="article">
+<meta property="og:title" content="操作系统-虚拟存储系统">
+<meta property="og:url" content="https://riverferry.site/2020-03-23-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E8%99%9A%E6%8B%9F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="参考虚拟内存的那点事儿 陈向群操作系统">
+<meta property="og:locale">
+<meta property="og:image" content="https://i.loli.net/2020/03/23/E5XH31jGcble6mS.png">
+<meta property="og:image" content="https://i.loli.net/2020/03/23/2MB7InqceVy1jY5.png">
+<meta property="og:image" content="https://i.loli.net/2020/03/23/rgcOa3Jp4CDLEHZ.png">
+<meta property="og:image" content="https://i.loli.net/2020/03/23/E7NoPdGaBt3AshX.png">
+<meta property="og:image" content="https://i.loli.net/2020/03/23/wnSDGxPIldBZbiK.png">
+<meta property="og:image" content="https://i.loli.net/2020/03/04/qi568fuBnzmxDHc.png">
+<meta property="og:image" content="https://i.loli.net/2020/03/23/oriMy2RXVU5fjIL.png">
+<meta property="og:image" content="https://i.loli.net/2020/03/23/rT6Ze7v4bjGSMIk.png">
+<meta property="og:image" content="https://i.loli.net/2020/03/23/z7SroZuvncpqFMX.png">
+<meta property="og:image" content="https://i.loli.net/2020/03/23/xqPJronleHQXtgR.png">
+<meta property="og:image" content="https://i.loli.net/2020/03/23/pHqQ4w6uMUinO8J.jpg">
+<meta property="article:published_time" content="2020-03-23T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.278Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="OperatingSystem">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/03/23/E5XH31jGcble6mS.png">
+
+<link rel="canonical" href="https://riverferry.site/2020-03-23-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E8%99%9A%E6%8B%9F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>操作系统-虚拟存储系统 | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2020-03-23-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E8%99%9A%E6%8B%9F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          操作系统-虚拟存储系统
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-03-23 00:00:00" itemprop="dateCreated datePublished" datetime="2020-03-23T00:00:00+00:00">2020-03-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>1.3k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>1 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://sylvanassun.github.io/2017/10/29/2017-10-29-virtual_memory/">虚拟内存的那点事儿</a></p>
+<p><a href="">陈向群操作系统</a></p>
+<hr>
+<a id="more"></a>
+
+<h2 id="虚拟存储系统"><a href="#虚拟存储系统" class="headerlink" title="虚拟存储系统"></a>虚拟存储系统</h2><p><strong>所谓虚拟存储技术是指：当进程运行时，先将其一部分装入内存，另一部分暂留在磁盘，当要执行的指令或访问的数据不在内存时，由操作系统自动完成将它们从磁盘调入内存的工作</strong></p>
+<h3 id="虚拟地址空间"><a href="#虚拟地址空间" class="headerlink" title="虚拟地址空间"></a>虚拟地址空间</h3><blockquote>
+<p>分配给进程的虚拟内存</p>
+</blockquote>
+<h3 id="虚拟页式存储"><a href="#虚拟页式存储" class="headerlink" title="虚拟页式存储"></a>虚拟页式存储</h3><p><strong><code>即虚拟存储技术+页式存储管理方案</code></strong></p>
+<p>基本思想：</p>
+<ul>
+<li>进程开始运行之前，不是装入全部页面，而是装入一个或零个页面</li>
+<li>之后，根据进程运行的需要，动态装入其他页面</li>
+<li>当内存空间已满，而又需要装入新的页面时，则根据某种算法置换内存中的某个页面，以便装入新的页面</li>
+</ul>
+<hr>
+<h2 id="页式存储"><a href="#页式存储" class="headerlink" title="页式存储"></a>页式存储</h2><ul>
+<li>用户进程地址空间被划分为大小相等的部分，称为页（page）或页面，从0开始编号</li>
+<li>内存空间按同样大小划分为大小相等的区域，称为页框（page frame），从0开始编号；也称为物理页面，页帧，内存块</li>
+</ul>
+<p><strong><code>以页为单位进行分配，并按进程需要的页数来分配；逻辑上相邻的页，物理上不一定相邻</code></strong></p>
+<h3 id="页表项"><a href="#页表项" class="headerlink" title="页表项"></a>页表项</h3><blockquote>
+<p>记录了逻辑页号与页框号的对应关系</p>
+</blockquote>
+<p><img src="https://i.loli.net/2020/03/23/E5XH31jGcble6mS.png" alt="页表.png"></p>
+<hr>
+<h3 id="一级页表"><a href="#一级页表" class="headerlink" title="一级页表"></a>一级页表</h3><p><strong>图片来源:</strong><a target="_blank" rel="noopener" href="https://sylvanassun.github.io/2017/10/29/2017-10-29-virtual_memory/">虚拟内存的那点事儿</a><br><img src="https://i.loli.net/2020/03/23/2MB7InqceVy1jY5.png" alt="一级页表.png"></p>
+<hr>
+<h3 id="2级页表"><a href="#2级页表" class="headerlink" title="2级页表"></a>2级页表</h3><p><strong>图片来源:</strong><a target="_blank" rel="noopener" href="https://sylvanassun.github.io/2017/10/29/2017-10-29-virtual_memory/">虚拟内存的那点事儿</a><br><img src="https://i.loli.net/2020/03/23/rgcOa3Jp4CDLEHZ.png" alt="2级页表.png"></p>
+<p><img src="https://i.loli.net/2020/03/23/E7NoPdGaBt3AshX.png" alt="2级页表结构.png"></p>
+<p><strong>计算</strong></p>
+<p>2^10 * 2^10 * 2^12 = 1024 * 1024 * 4KB = 4G</p>
+<hr>
+<h3 id="多级页表"><a href="#多级页表" class="headerlink" title="多级页表"></a>多级页表</h3><p><img src="https://i.loli.net/2020/03/23/wnSDGxPIldBZbiK.png" alt="多级页表.png"></p>
+<p><strong>优势：</strong></p>
+<ul>
+<li>多级页表的第一层目录全部加载在内存，其余层部分加载，这样节省了内存</li>
+<li>前面的目录项都是索引，如果第一层就不存在，后面也就不用继续遍历了，提高了查询效率</li>
+</ul>
+<hr>
+<p><code>页表起始地址保存在何处？</code></p>
+<p>mm_struct的pgd保存了进程的页表项起始地址，当执行一个进程的时候，页表项起始地址会被放到页表基址寄存器中。</p>
+<p><img src="https://i.loli.net/2020/03/04/qi568fuBnzmxDHc.png" alt="task_struct.png"></p>
+<hr>
+<p><code>页表保存在哪里？</code></p>
+<p>页表保存在磁盘，内存，MMU的TLB(快表)缓存中</p>
+<p><img src="https://i.loli.net/2020/03/23/oriMy2RXVU5fjIL.png" alt="存储器.png"></p>
+<hr>
+<h2 id="地址转换"><a href="#地址转换" class="headerlink" title="地址转换"></a>地址转换</h2><h3 id="MMU-memory-management-unit"><a href="#MMU-memory-management-unit" class="headerlink" title="MMU(memory management unit)"></a>MMU(memory management unit)</h3><blockquote>
+<p>内存管理单元</p>
+</blockquote>
+<p><img src="https://i.loli.net/2020/03/23/rT6Ze7v4bjGSMIk.png" alt="mmu1.png"></p>
+<p><img src="https://i.loli.net/2020/03/23/z7SroZuvncpqFMX.png" alt="mmu2.png"></p>
+<hr>
+<h3 id="TBL-translation-lookaside-buffer"><a href="#TBL-translation-lookaside-buffer" class="headerlink" title="TBL(translation lookaside buffer)"></a>TBL(translation lookaside buffer)</h3><ul>
+<li>在CPU中引入的高速缓存（Cache），可以匹配CPU的处理速率和内存的访问速度</li>
+<li>一种随机存取型存储器，除连线寻址机制外，还有接线逻辑，能按特定的匹配标志在一个存储周期内对所有的字同时进行比较</li>
+</ul>
+<p><img src="https://i.loli.net/2020/03/23/xqPJronleHQXtgR.png" alt="tlb.png"></p>
+<hr>
+<h2 id="页错误"><a href="#页错误" class="headerlink" title="页错误"></a>页错误</h2><ul>
+<li>又称页面错误、页故障、页面失效</li>
+<li>地址转换过程中硬件产生的异常</li>
+</ul>
+<p><strong>具体原因：</strong></p>
+<ul>
+<li>所访问的虚拟页面没有调入物理内存(<code>缺页异常</code>)</li>
+<li>页面访问违反权限（读/写、用户/内核）</li>
+<li>错误的访问地址</li>
+</ul>
+<h3 id="缺页异常"><a href="#缺页异常" class="headerlink" title="缺页异常"></a>缺页异常</h3><ul>
+<li>是一种Page Fault</li>
+<li>在地址映射过程中，硬件检查页表时发现所要访问的页面不在内存，则产生该异常——缺页异常</li>
+<li>操作系统执行缺页异常处理程序：获得磁盘地址，启动磁盘，将该页调入内存</li>
+</ul>
+<hr>
+<h2 id="交换技术"><a href="#交换技术" class="headerlink" title="交换技术"></a>交换技术</h2><p><strong>内存空间紧张时，系统将内存中某些进程暂时移到外存，把外存中某些进程换进内存，占据前者所占用的区域（进程在内存与磁盘之间的动态调度）</strong></p>
+<p>进程的哪些内容要交换到磁盘？会遇到什么困难？</p>
+<blockquote>
+<p>运行时创建或修改的内容：栈和堆</p>
+</blockquote>
+<p>在磁盘的什么位置保存被换出的进程？</p>
+<blockquote>
+<p>交换区：一般系统会指定一块特殊的磁盘区域作为交换空间（swap space），包含连续的磁道，操作系统可以使用底层的磁盘读写操作对其高效访问</p>
+</blockquote>
+<p>交换时机？</p>
+<blockquote>
+<p>只要不用就换出（很少再用）；内存空间不够或有不够的危险时换出</p>
+</blockquote>
+<p>如何选择被换出的进程？</p>
+<blockquote>
+<p>考虑进程的各种属性；不应换出处于等待I/O状态的进程</p>
+</blockquote>
+<hr>
+<h2 id="ending"><a href="#ending" class="headerlink" title="ending"></a>ending</h2><p><img src="https://i.loli.net/2020/03/23/pHqQ4w6uMUinO8J.jpg" alt="77766200_p0_master1200.jpg"></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2020-03-23-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E8%99%9A%E6%8B%9F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/" title="操作系统-虚拟存储系统">https://riverferry.site/2020-03-23-操作系统-虚拟存储系统/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/OperatingSystem/" rel="tag"><i class="fa fa-tags"></i> OperatingSystem</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020-03-22-Linux-fork%E5%92%8Cclone/" rel="prev" title="Linux-fork和clone">
+      <i class="fa fa-chevron-left"></i> Linux-fork和clone
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020-03-23-sizeof/" rel="next" title="sizeof">
+      sizeof <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">参考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%99%9A%E6%8B%9F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F"><span class="nav-number">2.</span> <span class="nav-text">虚拟存储系统</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4"><span class="nav-number">2.1.</span> <span class="nav-text">虚拟地址空间</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%99%9A%E6%8B%9F%E9%A1%B5%E5%BC%8F%E5%AD%98%E5%82%A8"><span class="nav-number">2.2.</span> <span class="nav-text">虚拟页式存储</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A1%B5%E5%BC%8F%E5%AD%98%E5%82%A8"><span class="nav-number">3.</span> <span class="nav-text">页式存储</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A1%B5%E8%A1%A8%E9%A1%B9"><span class="nav-number">3.1.</span> <span class="nav-text">页表项</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E7%BA%A7%E9%A1%B5%E8%A1%A8"><span class="nav-number">3.2.</span> <span class="nav-text">一级页表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E7%BA%A7%E9%A1%B5%E8%A1%A8"><span class="nav-number">3.3.</span> <span class="nav-text">2级页表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E7%BA%A7%E9%A1%B5%E8%A1%A8"><span class="nav-number">3.4.</span> <span class="nav-text">多级页表</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9C%B0%E5%9D%80%E8%BD%AC%E6%8D%A2"><span class="nav-number">4.</span> <span class="nav-text">地址转换</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#MMU-memory-management-unit"><span class="nav-number">4.1.</span> <span class="nav-text">MMU(memory management unit)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TBL-translation-lookaside-buffer"><span class="nav-number">4.2.</span> <span class="nav-text">TBL(translation lookaside buffer)</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A1%B5%E9%94%99%E8%AF%AF"><span class="nav-number">5.</span> <span class="nav-text">页错误</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BC%BA%E9%A1%B5%E5%BC%82%E5%B8%B8"><span class="nav-number">5.1.</span> <span class="nav-text">缺页异常</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%A4%E6%8D%A2%E6%8A%80%E6%9C%AF"><span class="nav-number">6.</span> <span class="nav-text">交换技术</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ending"><span class="nav-number">7.</span> <span class="nav-text">ending</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : '79f55099ff3eb9aa6a4dc92b964cbfd4',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

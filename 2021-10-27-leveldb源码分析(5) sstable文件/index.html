@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="项目有用到leveldb,打算最近看看源码，整理个系列文章，这是第5篇sstable文件。源码注释地址">
+<meta property="og:type" content="article">
+<meta property="og:title" content="leveldb源码分析(5) sstable文件">
+<meta property="og:url" content="https://riverferry.site/2021-10-27-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(5)%20sstable%E6%96%87%E4%BB%B6/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="项目有用到leveldb,打算最近看看源码，整理个系列文章，这是第5篇sstable文件。源码注释地址">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20211103_new_2.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20211027_new.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20211102_1.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20211103_2_new.png">
+<meta property="article:published_time" content="2021-10-27T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.293Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="leveldb">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20211103_new_2.png">
+
+<link rel="canonical" href="https://riverferry.site/2021-10-27-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(5)%20sstable%E6%96%87%E4%BB%B6/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>leveldb源码分析(5) sstable文件 | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2021-10-27-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(5)%20sstable%E6%96%87%E4%BB%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          leveldb源码分析(5) sstable文件
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-10-27 00:00:00" itemprop="dateCreated datePublished" datetime="2021-10-27T00:00:00+00:00">2021-10-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>5.2k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>5 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div class="note default">
+            <p>项目有用到leveldb,打算最近看看源码，整理个系列文章，这是第5篇sstable文件。<a target="_blank" rel="noopener" href="https://github.com/RiverFerry/leveldb-learn-log">源码注释地址</a></p>
+          </div>
+
+
+<a id="more"></a>
+
+<h2 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h2><p>从上一篇的流程中可以看到这里会出现压缩的场景:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">MakeRoomForWrite</span><br><span class="line">    MaybeScheduleCompaction</span><br><span class="line">        BackgroundCompaction</span><br><span class="line">            CompactMemTable</span><br><span class="line">                WriteLevel0Table</span><br><span class="line">                    BuildTable</span><br></pre></td></tr></table></figure>
+
+<p>BuildTable中open一个新的文件名，然后执行<code>finish</code></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Status <span class="title">TableBuilder::Finish</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 写 data_block</span></span><br><span class="line">    <span class="built_in">Flush</span>();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 写 filter_block</span></span><br><span class="line">    <span class="built_in">WriteRawBlock</span>(r-&gt;filter_block-&gt;<span class="built_in">Finish</span>(), kNoCompression,  </span><br><span class="line">                  &amp;filter_block_handle);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 写 meta_index_block</span></span><br><span class="line">    <span class="built_in">WriteBlock</span>(&amp;meta_index_block, &amp;metaindex_block_handle);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 写 index_block</span></span><br><span class="line">    <span class="built_in">WriteBlock</span>(&amp;r-&gt;index_block, &amp;index_block_handle);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 写 footer</span></span><br><span class="line">    r-&gt;status = r-&gt;file-&gt;<span class="built_in">Append</span>(footer_encoding);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>WriteRawBlock/WriteBlock会调用Append写，posix下优先写buf,buf不够直接调用write写文件。</p>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/20211103_new_2.png"></p>
+<p>分别看看用处：</p>
+<h3 id="BlockBuilder"><a href="#BlockBuilder" class="headerlink" title="BlockBuilder"></a>BlockBuilder</h3><p>BlockBuilder的成员变量如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> Options* options_;</span><br><span class="line">std::string buffer_;              <span class="comment">// Destination buffer</span></span><br><span class="line">std::vector&lt;<span class="keyword">uint32_t</span>&gt; restarts_;  <span class="comment">// Restart points</span></span><br><span class="line"><span class="keyword">int</span> counter_;                     <span class="comment">// Number of entries emitted since restart</span></span><br><span class="line"><span class="keyword">bool</span> finished_;                   <span class="comment">// Has Finish() been called?</span></span><br><span class="line">std::string last_key_;</span><br></pre></td></tr></table></figure>
+
+<p>buffer_指向的内容就是下图的第2行，其中每一个entry的格式是第一行的表示。restarts_记录了每一个前缀压缩新的开始点，最后会把这些值存入buffer_后面。其他几个字段没那么重要了。</p>
+<img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/20211027_new.png" width="100%" height="100%">
+
+<h3 id="data-block"><a href="#data-block" class="headerlink" title="data_block"></a>data_block</h3><p><code>data_block</code>的类型是<strong>BlockBuilder</strong>，add的kv(一个entry)是(key, value);</p>
+<h3 id="filter-block"><a href="#filter-block" class="headerlink" title="filter_block"></a>filter_block</h3><p>filter_block的类型是<strong>FilterBlockBuilder</strong>,成员变量如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> FilterPolicy* policy_;</span><br><span class="line">std::string keys_;             <span class="comment">// Flattened(扁平) key contents</span></span><br><span class="line">std::vector&lt;<span class="keyword">size_t</span>&gt; start_;    <span class="comment">// Starting index in keys_ of each key</span></span><br><span class="line">std::string result_;           <span class="comment">// Filter data computed so far</span></span><br><span class="line">std::vector&lt;Slice&gt; tmp_keys_;  <span class="comment">// policy_-&gt;CreateFilter() argument</span></span><br><span class="line">std::vector&lt;<span class="keyword">uint32_t</span>&gt; filter_offsets_;</span><br></pre></td></tr></table></figure>
+
+<p>keys_和start_在AddKey的时候赋值，如下:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">FilterBlockBuilder::AddKey</span><span class="params">(<span class="keyword">const</span> Slice&amp; key)</span> </span>&#123;</span><br><span class="line">  Slice k = key;</span><br><span class="line">  start_.<span class="built_in">push_back</span>(keys_.<span class="built_in">size</span>());</span><br><span class="line">  keys_.<span class="built_in">append</span>(k.<span class="built_in">data</span>(), k.<span class="built_in">size</span>());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/20211102_1.png"></p>
+<p>看下<code>StartBlock</code>的实现：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">FilterBlockBuilder::StartBlock</span><span class="params">(<span class="keyword">uint64_t</span> block_offset)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// kFilterBase = 2kb</span></span><br><span class="line">  <span class="keyword">uint64_t</span> filter_index = (block_offset / kFilterBase);</span><br><span class="line">  <span class="built_in">assert</span>(filter_index &gt;= filter_offsets_.<span class="built_in">size</span>());</span><br><span class="line">  <span class="keyword">while</span> (filter_index &gt; filter_offsets_.<span class="built_in">size</span>()) &#123;</span><br><span class="line">    <span class="built_in">GenerateFilter</span>();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>StartBlock</code>被调用的地方有:</p>
+<ul>
+<li>TableBuilder构造函数</li>
+<li>TableBuilder::Flush()</li>
+</ul>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">TableBuilder::<span class="built_in">TableBuilder</span>(<span class="keyword">const</span> Options&amp; options, WritableFile* file)</span><br><span class="line">    : <span class="built_in">rep_</span>(<span class="keyword">new</span> <span class="built_in">Rep</span>(options, file)) &#123;</span><br><span class="line">  <span class="keyword">if</span> (rep_-&gt;filter_block != <span class="literal">nullptr</span>) &#123;</span><br><span class="line">    rep_-&gt;filter_block-&gt;<span class="built_in">StartBlock</span>(<span class="number">0</span>);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">TableBuilder::Flush</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  Rep* r = rep_;</span><br><span class="line">  <span class="built_in">assert</span>(!r-&gt;closed);</span><br><span class="line">  <span class="keyword">if</span> (!<span class="built_in">ok</span>()) <span class="keyword">return</span>;</span><br><span class="line">  <span class="keyword">if</span> (r-&gt;data_block.<span class="built_in">empty</span>()) <span class="keyword">return</span>;</span><br><span class="line">  <span class="built_in">assert</span>(!r-&gt;pending_index_entry);</span><br><span class="line">  <span class="built_in">WriteBlock</span>(&amp;r-&gt;data_block, &amp;r-&gt;pending_handle); <span class="comment">// data_block写到buf或文件</span></span><br><span class="line">  <span class="keyword">if</span> (<span class="built_in">ok</span>()) &#123;</span><br><span class="line">    r-&gt;pending_index_entry = <span class="literal">true</span>;</span><br><span class="line">    r-&gt;status = r-&gt;file-&gt;<span class="built_in">Flush</span>(); <span class="comment">// 缓存buf刷新到文件</span></span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (r-&gt;filter_block != <span class="literal">nullptr</span>) &#123;</span><br><span class="line">    r-&gt;filter_block-&gt;<span class="built_in">StartBlock</span>(r-&gt;offset); <span class="comment">// ==</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>filter_offsets_中存了每个<code>filter</code>的offset,每个filter记录sstable的data_block的2kb的kv的特征值(默认是bloom filter算的Bits)。所以StartBlock函数的入参拿到新的sstable中data_block的offset/2kb，如果比filter_offsets_原来的值大，就不断GenerateFilter生成新的filter,没生成一个filter_offsets_的size就加一。</p>
+<p>看下Finish的实现:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Slice <span class="title">FilterBlockBuilder::Finish</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (!start_.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">    <span class="built_in">GenerateFilter</span>();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Append array of per-filter offsets</span></span><br><span class="line">  <span class="keyword">const</span> <span class="keyword">uint32_t</span> array_offset = result_.<span class="built_in">size</span>();</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">size_t</span> i = <span class="number">0</span>; i &lt; filter_offsets_.<span class="built_in">size</span>(); i++) &#123;</span><br><span class="line">    <span class="built_in">PutFixed32</span>(&amp;result_, filter_offsets_[i]);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="built_in">PutFixed32</span>(&amp;result_, array_offset);</span><br><span class="line">  <span class="comment">// kFilterBaseLg = 11</span></span><br><span class="line">  result_.<span class="built_in">push_back</span>(kFilterBaseLg);  <span class="comment">// Save encoding parameter in result</span></span><br><span class="line">  <span class="keyword">return</span> <span class="built_in">Slice</span>(result_);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注意，每执行一次GenerateFilter，keys_和start_都会clear.但filter_offsets_的值是一直在的。然后这个过程中生成的filter内容都保存在result_.最后Finish的时候filter_offsets_的值以及原来result_的size都会写到result_的后面，kFilterBaseLg=11(1 &lt;&lt; 11, 表示2kb)也会写到后面。也就是说最后Finish完就生成了一个新的filter_block。其中result_指向的内容如下：</p>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/20211103_2_new.png"></p>
+<p>这就是一个filter_block的内容。后面数据读取单独整理一篇再分析读取的逻辑。</p>
+<h3 id="meta-index-block"><a href="#meta-index-block" class="headerlink" title="meta_index_block"></a>meta_index_block</h3><p><code>meta_index_block</code>的类型是<strong>BlockBuilder</strong>, add的kv(一个entry)是(filter.leveldb.BuiltinBloomFilter2, string(filter_block_handle)); filter_block_handle记录了filter_block的位置信息</p>
+<h3 id="index-block"><a href="#index-block" class="headerlink" title="index_block"></a>index_block</h3><p><code>index_block</code>的类型是<strong>BlockBuilder</strong>, add的kv(一个entry)是(last_key, string(pending_handle));last_key记录了data_block的最后一个key, pending_handle记录了最后一个data_block的位置信息。</p>
+<p>last_key更新的位置:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">TableBuilder::Add</span><span class="params">(<span class="keyword">const</span> Slice&amp; key, <span class="keyword">const</span> Slice&amp; value)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    r-&gt;last_key.<span class="built_in">assign</span>(key.<span class="built_in">data</span>(), key.<span class="built_in">size</span>());</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>pending_handle更新的位置：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">TableBuilder::<span class="built_in">Flush</span>()</span><br><span class="line">    <span class="built_in">WriteBlock</span>(&amp;r-&gt;data_block, &amp;r-&gt;pending_handle)</span><br><span class="line">        <span class="built_in">WriteRawBlock</span>(block_contents, type, handle);</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">TableBuilder::WriteRawBlock</span><span class="params">(<span class="keyword">const</span> Slice&amp; block_contents,</span></span></span><br><span class="line"><span class="function"><span class="params">                                 CompressionType type, BlockHandle* handle)</span> </span>&#123;</span><br><span class="line">Rep* r = rep_;</span><br><span class="line">handle-&gt;<span class="built_in">set_offset</span>(r-&gt;offset);</span><br><span class="line"><span class="comment">// block_contents是data_block压缩后的值</span></span><br><span class="line">handle-&gt;<span class="built_in">set_size</span>(block_contents.<span class="built_in">size</span>());</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="footer"><a href="#footer" class="headerlink" title="footer"></a>footer</h3><p>Footer有2个数据成员, 记录了metaindex_handle_和index_handle_,也即meta_index_block和index_block的位置信息.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Footer encapsulates the fixed information stored at the tail</span></span><br><span class="line"><span class="comment">// end of every table file.</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Footer</span> &#123;</span></span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  ...</span><br><span class="line"></span><br><span class="line"> <span class="keyword">private</span>:</span><br><span class="line">  BlockHandle metaindex_handle_;</span><br><span class="line">  BlockHandle index_handle_;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// BlockHandle is a pointer to the extent of a file that stores a data</span></span><br><span class="line"><span class="comment">// block or a meta block.</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BlockHandle</span> &#123;</span></span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  ...</span><br><span class="line"></span><br><span class="line"> <span class="keyword">private</span>:</span><br><span class="line">  <span class="keyword">uint64_t</span> offset_;</span><br><span class="line">  <span class="keyword">uint64_t</span> size_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h2 id="reference"><a href="#reference" class="headerlink" title="reference"></a>reference</h2><p><a target="_blank" rel="noopener" href="https://web.archive.org/web/20120131105110/http://rdc.taobao.com/blog/cs/wp-content/plugins/leveldb%E5%AE%9E%E7%8E%B0%E8%A7%A3%E6%9E%90.pdf">https://web.archive.org/web/20120131105110/http://rdc.taobao.com/blog/cs/wp-content/plugins/leveldb%E5%AE%9E%E7%8E%B0%E8%A7%A3%E6%9E%90.pdf</a></p>
+<p><a target="_blank" rel="noopener" href="http://catkang.github.io/2017/01/17/leveldb-data.html">http://catkang.github.io/2017/01/17/leveldb-data.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.bookstack.cn/read/Leveldb-handbook/spilt.2.b308da3c3d01f3cd.md">https://www.bookstack.cn/read/Leveldb-handbook/spilt.2.b308da3c3d01f3cd.md</a></p>
+<p><a target="_blank" rel="noopener" href="https://izualzhy.cn/leveldb-block">https://izualzhy.cn/leveldb-block</a></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2021-10-27-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(5)%20sstable%E6%96%87%E4%BB%B6/" title="leveldb源码分析(5) sstable文件">https://riverferry.site/2021-10-27-leveldb源码分析(5) sstable文件/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/leveldb/" rel="tag"><i class="fa fa-tags"></i> leveldb</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021-10-13-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(4)%20memtable%20and%20log/" rel="prev" title="leveldb源码分析(4) memtable and log">
+      <i class="fa fa-chevron-left"></i> leveldb源码分析(4) memtable and log
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021-11-04-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(6)%20%E6%96%87%E4%BB%B6%E5%8E%8B%E7%BC%A9/" rel="next" title="leveldb源码分析(6) 文件压缩">
+      leveldb源码分析(6) 文件压缩 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81"><span class="nav-number">1.</span> <span class="nav-text">代码</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#BlockBuilder"><span class="nav-number">1.1.</span> <span class="nav-text">BlockBuilder</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#data-block"><span class="nav-number">1.2.</span> <span class="nav-text">data_block</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#filter-block"><span class="nav-number">1.3.</span> <span class="nav-text">filter_block</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#meta-index-block"><span class="nav-number">1.4.</span> <span class="nav-text">meta_index_block</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#index-block"><span class="nav-number">1.5.</span> <span class="nav-text">index_block</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#footer"><span class="nav-number">1.6.</span> <span class="nav-text">footer</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">2.</span> <span class="nav-text">reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : '502fedbf828c621facd3aeda903d6972',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="参考MySQL实战45讲 mysql技术内幕 关于binary log那些事">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mysql binlog">
+<meta property="og:url" content="https://riverferry.site/2020-08-20-mysql%20binlog/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="参考MySQL实战45讲 mysql技术内幕 关于binary log那些事">
+<meta property="og:locale">
+<meta property="article:published_time" content="2020-08-20T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.284Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="mysql">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://riverferry.site/2020-08-20-mysql%20binlog/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>mysql binlog | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2020-08-20-mysql%20binlog/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          mysql binlog
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-08-20 00:00:00" itemprop="dateCreated datePublished" datetime="2020-08-20T00:00:00+00:00">2020-08-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>9.8k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>9 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="">MySQL实战45讲</a></p>
+<p><a href="">mysql技术内幕</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/xinysu/p/6607658.html">关于binary log那些事</a></p>
+<a id="more"></a>
+
+<h2 id="查看配置信息"><a href="#查看配置信息" class="headerlink" title="查看配置信息"></a>查看配置信息</h2><p>查看binlog是否打开以及配置信息：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">MySQL [mysql]&gt; show variables like &#x27;%log_bin%&#x27;;</span><br><span class="line">+---------------------------------+---------------------------------------+</span><br><span class="line">| Variable_name                   | Value                                 |</span><br><span class="line">+---------------------------------+---------------------------------------+</span><br><span class="line">| log_bin                         | ON                                    |</span><br><span class="line">| log_bin_basename                | /usr/local/mysql/data/mysql-bin       |</span><br><span class="line">| log_bin_index                   | /usr/local/mysql/data/mysql-bin.index |</span><br><span class="line">| log_bin_trust_function_creators | OFF                                   |</span><br><span class="line">| log_bin_use_v1_row_events       | OFF                                   |</span><br><span class="line">| sql_log_bin                     | ON                                    |</span><br><span class="line">+---------------------------------+---------------------------------------+</span><br><span class="line"><span class="number">6</span> <span class="function">rows in <span class="title">set</span> <span class="params">(<span class="number">0.00</span> sec)</span></span></span><br></pre></td></tr></table></figure>
+
+<p>查看配置文件：</p>
+<p>log_bin是打开binlog的开关.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[root@xxxx]<span class="meta"># mysql --help | grep cnf</span></span><br><span class="line">/etc/mysql/my.cnf /etc/my.cnf ~/.my.cnf </span><br><span class="line">                      order of preference, my.cnf, $MYSQL_TCP_PORT,</span><br><span class="line">[root@xxxx]<span class="meta"># cat /etc/my.cnf</span></span><br><span class="line">[mysqld]</span><br><span class="line">...</span><br><span class="line"> </span><br><span class="line">log_bin = mysql-bin</span><br><span class="line">binlog-format=STATEMENT </span><br><span class="line">expire_logs_days = <span class="number">30</span></span><br></pre></td></tr></table></figure>
+
+<p>文件列表：</p>
+<p>index是binlog的索引文件，记录所有的binlog日志文件。binlog日志是可续写的，不停有新的文件产生。而redo log是循环写的，固定文件个数，满了后从头开始。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">[root@xxxx]<span class="meta"># ll mysql-bin.*</span></span><br><span class="line">-rw-r----- <span class="number">1</span> mysql mysql   <span class="number">177</span> Jul <span class="number">31</span> <span class="number">17</span>:<span class="number">22</span> mysql-bin<span class="number">.000001</span></span><br><span class="line">-rw-r----- <span class="number">1</span> mysql mysql   <span class="number">177</span> Jul <span class="number">31</span> <span class="number">17</span>:<span class="number">26</span> mysql-bin<span class="number">.000002</span></span><br><span class="line">-rw-r----- <span class="number">1</span> mysql mysql  <span class="number">1321</span> Jul <span class="number">31</span> <span class="number">17</span>:<span class="number">36</span> mysql-bin<span class="number">.000003</span></span><br><span class="line">-rw-r----- <span class="number">1</span> mysql mysql <span class="number">21167</span> Aug <span class="number">20</span> <span class="number">10</span>:<span class="number">50</span> mysql-bin<span class="number">.000004</span></span><br><span class="line">-rw-r----- <span class="number">1</span> mysql mysql    <span class="number">76</span> Jul <span class="number">31</span> <span class="number">17</span>:<span class="number">36</span> mysql-bin.index</span><br><span class="line">[root@xxxx]<span class="meta"># cat mysql-bin.index</span></span><br><span class="line">./mysql-bin<span class="number">.000001</span></span><br><span class="line">./mysql-bin<span class="number">.000002</span></span><br><span class="line">./mysql-bin<span class="number">.000003</span></span><br><span class="line">./mysql-bin<span class="number">.000004</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="参数含义"><a href="#参数含义" class="headerlink" title="参数含义"></a>参数含义</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">+--------------------------------------------+---------------------------------------+</span><br><span class="line">| Variable_name                              | Value                                 |</span><br><span class="line">+--------------------------------------------+---------------------------------------+</span><br><span class="line">| binlog_cache_size                          | <span class="number">32768</span>                                 |</span><br><span class="line">| binlog_checksum                            | CRC32                                 |</span><br><span class="line">| binlog_direct_non_transactional_updates    | OFF                                   |</span><br><span class="line">| binlog_error_action                        | ABORT_SERVER                          |</span><br><span class="line">| binlog_format                              | STATEMENT                             |</span><br><span class="line">| binlog_group_commit_sync_delay             | <span class="number">0</span>                                     |</span><br><span class="line">| binlog_group_commit_sync_no_delay_count    | <span class="number">0</span>                                     |</span><br><span class="line">| binlog_gtid_simple_recovery                | ON                                    |</span><br><span class="line">| binlog_max_flush_queue_time                | <span class="number">0</span>                                     |</span><br><span class="line">| binlog_order_commits                       | ON                                    |</span><br><span class="line">| binlog_row_image                           | FULL                                  |</span><br><span class="line">| binlog_rows_query_log_events               | OFF                                   |</span><br><span class="line">| binlog_stmt_cache_size                     | <span class="number">32768</span>                                 |</span><br><span class="line">| binlog_transaction_dependency_history_size | <span class="number">25000</span>                                 |</span><br><span class="line">| binlog_transaction_dependency_tracking     | COMMIT_ORDER                          |</span><br><span class="line">| innodb_api_enable_binlog                   | OFF                                   |</span><br><span class="line">| innodb_locks_unsafe_for_binlog             | OFF                                   |</span><br><span class="line">| log_bin                                    | ON                                    |</span><br><span class="line">| log_bin_basename                           | /usr/local/mysql/data/mysql-bin       |</span><br><span class="line">| log_bin_index                              | /usr/local/mysql/data/mysql-bin.index |</span><br><span class="line">| log_bin_trust_function_creators            | OFF                                   |</span><br><span class="line">| log_bin_use_v1_row_events                  | OFF                                   |</span><br><span class="line">| log_statements_unsafe_for_binlog           | ON                                    |</span><br><span class="line">| max_binlog_cache_size                      | <span class="number">18446744073709547520</span>                  |</span><br><span class="line">| max_binlog_size                            | <span class="number">1073741824</span>                            |</span><br><span class="line">| max_binlog_stmt_cache_size                 | <span class="number">18446744073709547520</span>                  |</span><br><span class="line">| sql_log_bin                                | ON                                    |</span><br><span class="line">| sync_binlog                                | <span class="number">1</span>                                     |</span><br><span class="line">+--------------------------------------------+---------------------------------------+</span><br></pre></td></tr></table></figure>
+
+<p><code>max_binlog_size</code>表示单个binlog日志文件的大小，默认是1g,超过后产生新文件</p>
+<p><code>binlog_cache_size</code>表示binlog在内存的缓冲区大小，默认32k,这个大小是基于会话的，所以不能太大。也不能太小，因为io压力会大</p>
+<p><code>sync_binlog</code>是否同步binlog到磁盘，就不写缓冲区了。高可用但是对磁盘io有压力</p>
+<h3 id="binlog-format"><a href="#binlog-format" class="headerlink" title="binlog_format"></a>binlog_format</h3><p><code>binlog_format</code>mysql5.1引入的，可设置的值有：statement, row, mixed.</p>
+<p>1 statement: 记录逻辑日志<br>2 row: 记录表的行更改情况<br>3 mixed: 默认采用statement格式记录日志，但是在一些情况下会使用row格式，可能的情况有</p>
+<ul>
+<li>表的存储引擎为ndb,这时对表的dml操作</li>
+<li>使用了uuid(), user(), current_user(), found_user(), row_count()等不确定函数</li>
+<li>使用了insert delay语句</li>
+<li>使用了用户定义函数</li>
+<li>使用了临时表</li>
+</ul>
+<p>对比：</p>
+<p>statement: update tt set d = 4 where c = 4<br>row: update tt set d = 5 where c = 4;</p>
+<p>show binlog events in ‘mysql-bin.000004’;</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">| mysql-bin<span class="number">.000004</span> | <span class="number">20948</span> | Query          |         <span class="number">1</span> |       <span class="number">21029</span> | BEGIN                                                                                                                                                                                                                                                                             |</span><br><span class="line">| mysql-bin<span class="number">.000004</span> | <span class="number">21029</span> | Query          |         <span class="number">1</span> |       <span class="number">21136</span> | use `mysql`; update tt set d = <span class="number">4</span> where c = <span class="number">4</span>                                                                                                                                                                                                                                      |</span><br><span class="line">| mysql-bin<span class="number">.000004</span> | <span class="number">21136</span> | Xid            |         <span class="number">1</span> |       <span class="number">21167</span> | COMMIT <span class="comment">/* xid=645 */</span>                                                                                                                                                                                                                                                              |</span><br><span class="line">| mysql-bin.000004 | 21167 | Anonymous_Gtid |         1 |       21232 | SET @@SESSION.GTID_NEXT= &#x27;ANONYMOUS&#x27;                                                                                                                                                                                                                                              |</span><br><span class="line">| mysql-bin<span class="number">.000004</span> | <span class="number">21232</span> | Query          |         <span class="number">1</span> |       <span class="number">21305</span> | BEGIN                                                                                                                                                                                                                                                                             |</span><br><span class="line">| mysql-bin<span class="number">.000004</span> | <span class="number">21305</span> | Table_map      |         <span class="number">1</span> |       <span class="number">21353</span> | table_id: <span class="number">146</span> (mysql.tt)                                                                                                                                                                                                                                                          |</span><br><span class="line">| mysql-bin<span class="number">.000004</span> | <span class="number">21353</span> | Update_rows    |         <span class="number">1</span> |       <span class="number">21415</span> | table_id: <span class="number">146</span> flags: STMT_END_F                                                                                                                                                                                                                                                   |</span><br><span class="line">| mysql-bin<span class="number">.000004</span> | <span class="number">21415</span> | Xid            |         <span class="number">1</span> |       <span class="number">21446</span> | COMMIT <span class="comment">/* xid=662 */</span>   </span><br></pre></td></tr></table></figure>
+
+<p>/usr/local/mysql/mysql/bin/mysqlbinlog mysql-bin.000004 -vv</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line">BEGIN</span><br><span class="line"><span class="comment">/*!*/</span>;</span><br><span class="line"><span class="meta"># at 21029</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">10</span>:<span class="number">50</span>:<span class="number">40</span> server id <span class="number">1</span>  end_log_pos <span class="number">21136</span> CRC32 <span class="number">0xab574d07</span>        Query   thread_id=<span class="number">11</span>    exec_time=<span class="number">0</span>     error_code=<span class="number">0</span></span><br><span class="line">SET TIMESTAMP=<span class="number">1597891840</span><span class="comment">/*!*/</span>;</span><br><span class="line">update tt set d = <span class="number">4</span> where c = <span class="number">4</span></span><br><span class="line"><span class="comment">/*!*/</span>;</span><br><span class="line"><span class="meta"># at 21136</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">10</span>:<span class="number">50</span>:<span class="number">40</span> server id <span class="number">1</span>  end_log_pos <span class="number">21167</span> CRC32 <span class="number">0xdd08f243</span>        Xid = <span class="number">645</span></span><br><span class="line">COMMIT<span class="comment">/*!*/</span>;</span><br><span class="line"><span class="meta"># at 21167</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">11</span>:<span class="number">26</span>:<span class="number">28</span> server id <span class="number">1</span>  end_log_pos <span class="number">21232</span> CRC32 <span class="number">0xe81ffc29</span>        Anonymous_GTID  last_committed=<span class="number">76</span>       sequence_number=<span class="number">77</span>      rbr_only=yes</span><br><span class="line"><span class="comment">/*!50718 SET TRANSACTION ISOLATION LEVEL READ COMMITTED*/</span><span class="comment">/*!*/</span>;</span><br><span class="line">SET @@SESSION.GTID_NEXT= &#x27;ANONYMOUS&#x27;/*!*/;</span><br><span class="line"><span class="meta"># at 21232</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">11</span>:<span class="number">26</span>:<span class="number">28</span> server id <span class="number">1</span>  end_log_pos <span class="number">21305</span> CRC32 <span class="number">0x2e084ad1</span>        Query   thread_id=<span class="number">11</span>    exec_time=<span class="number">0</span>     error_code=<span class="number">0</span></span><br><span class="line">SET TIMESTAMP=<span class="number">1597893988</span><span class="comment">/*!*/</span>;</span><br><span class="line">BEGIN</span><br><span class="line"><span class="comment">/*!*/</span>;</span><br><span class="line"><span class="meta"># at 21305</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">11</span>:<span class="number">26</span>:<span class="number">28</span> server id <span class="number">1</span>  end_log_pos <span class="number">21353</span> CRC32 <span class="number">0x13267696</span>        Table_map: `mysql`.`tt` mapped to number <span class="number">146</span></span><br><span class="line"><span class="meta"># at 21353</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">11</span>:<span class="number">26</span>:<span class="number">28</span> server id <span class="number">1</span>  end_log_pos <span class="number">21415</span> CRC32 <span class="number">0xf078d9cb</span>        Update_rows: table id <span class="number">146</span> flags: STMT_END_F</span><br><span class="line"></span><br><span class="line">BINLOG &#x27;</span><br><span class="line">ZO09XxMBAAAAMAAAAGlTAAAAAJIAAAAAAAEABW15c3FsAAJ0dAADAwMDAAaWdiYT</span><br><span class="line">ZO09Xx8BAAAAPgAAAKdTAAAAAJIAAAAAAAEAAgAD<span class="comment">///4FAAAAAQAAAAEAAAA+BQAAAAEAAAABQAA</span></span><br><span class="line">AMvZePA=</span><br><span class="line">&#x27;/*!*/;</span><br><span class="line">### UPDATE `mysql`.`tt`</span><br><span class="line">### WHERE</span><br><span class="line">###   @<span class="number">1</span>=<span class="number">20</span> <span class="comment">/* INT meta=0 nullable=0 is_null=0 */</span></span><br><span class="line">###   @<span class="number">2</span>=<span class="number">4</span> <span class="comment">/* INT meta=0 nullable=1 is_null=0 */</span></span><br><span class="line">###   @<span class="number">3</span>=<span class="number">4</span> <span class="comment">/* INT meta=0 nullable=1 is_null=0 */</span></span><br><span class="line">### SET</span><br><span class="line">###   @<span class="number">1</span>=<span class="number">20</span> <span class="comment">/* INT meta=0 nullable=0 is_null=0 */</span></span><br><span class="line">###   @<span class="number">2</span>=<span class="number">4</span> <span class="comment">/* INT meta=0 nullable=1 is_null=0 */</span></span><br><span class="line">###   @<span class="number">3</span>=<span class="number">5</span> <span class="comment">/* INT meta=0 nullable=1 is_null=0 */</span></span><br><span class="line"><span class="meta"># at 21415</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">11</span>:<span class="number">26</span>:<span class="number">28</span> server id <span class="number">1</span>  end_log_pos <span class="number">21446</span> CRC32 <span class="number">0xfa03d621</span>        Xid = <span class="number">662</span></span><br><span class="line">COMMIT<span class="comment">/*!*/</span>;</span><br><span class="line">SET @@SESSION.GTID_NEXT= &#x27;AUTOMATIC&#x27; /* added by mysqlbinlog */ /*!*/;</span><br><span class="line">DELIMITER ;</span><br><span class="line"># End of log file</span><br><span class="line"><span class="comment">/*!50003 SET COMPLETION_TYPE=@OLD_COMPLETION_TYPE*/</span>;</span><br><span class="line"><span class="comment">/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE=0*/</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="binlog-rows-query-log-events"><a href="#binlog-rows-query-log-events" class="headerlink" title="binlog_rows_query_log_events"></a>binlog_rows_query_log_events</h3><p>表示binlog日志中row格式下用不用打印执行语句，从前面的事件看，row格式下默认不打印执行语句的。这个参数默认是off:</p>
+<h4 id="查看并修改binlog-rows-query-log-events"><a href="#查看并修改binlog-rows-query-log-events" class="headerlink" title="查看并修改binlog_rows_query_log_events"></a>查看并修改binlog_rows_query_log_events</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">MySQL [mysql]&gt; show variables like &#x27;binlog_rows_query_log_events&#x27;;</span><br><span class="line">+------------------------------+-------+</span><br><span class="line">| Variable_name                | Value |</span><br><span class="line">+------------------------------+-------+</span><br><span class="line">| binlog_rows_query_log_events | OFF   |</span><br><span class="line">+------------------------------+-------+</span><br><span class="line"><span class="number">1</span> <span class="function">row in <span class="title">set</span> <span class="params">(<span class="number">0.00</span> sec)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line">MySQL [mysql]&gt; set binlog_rows_query_log_events = &#x27;ON&#x27;;</span><br><span class="line">Query OK, <span class="number">0</span> <span class="function">rows <span class="title">affected</span> <span class="params">(<span class="number">0.00</span> sec)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line">MySQL [mysql]&gt; show variables like &#x27;binlog_rows_query_log_events&#x27;;</span><br><span class="line">+------------------------------+-------+</span><br><span class="line">| Variable_name                | Value |</span><br><span class="line">+------------------------------+-------+</span><br><span class="line">| binlog_rows_query_log_events | ON    |</span><br><span class="line">+------------------------------+-------+</span><br><span class="line"><span class="number">1</span> <span class="function">row in <span class="title">set</span> <span class="params">(<span class="number">0.00</span> sec)</span></span></span><br></pre></td></tr></table></figure>
+
+<h4 id="dml查看binlog打印结果"><a href="#dml查看binlog打印结果" class="headerlink" title="dml查看binlog打印结果"></a>dml查看binlog打印结果</h4><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">MySQL [mysql]&gt; update tt set d = <span class="number">20</span> where id = <span class="number">2</span>;</span><br><span class="line">Query OK, <span class="number">1</span> <span class="function">row <span class="title">affected</span> <span class="params">(<span class="number">0.00</span> sec)</span></span></span><br><span class="line"><span class="function">Rows matched: <span class="number">1</span>  Changed: <span class="number">1</span>  Warnings: <span class="number">0</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">MySQL [mysql]&gt; show master status;</span></span><br><span class="line">+------------------+----------+--------------+------------------+-------------------+</span><br><span class="line">| File             | Position | Binlog_Do_DB | Binlog_Ignore_DB | Executed_Gtid_Set |</span><br><span class="line">+------------------+----------+--------------+------------------+-------------------+</span><br><span class="line">| mysql-bin<span class="number">.000004</span> |    <span class="number">21782</span> |              |                  |                   |</span><br><span class="line">+------------------+----------+--------------+------------------+-------------------+</span><br><span class="line"><span class="number">1</span> <span class="function">row in <span class="title">set</span> <span class="params">(<span class="number">0.00</span> sec)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line">MySQL [mysql]&gt; update tt set d = 200 where id = 2;</span><br><span class="line">Query OK, <span class="number">1</span> <span class="function">row <span class="title">affected</span> <span class="params">(<span class="number">0.00</span> sec)</span></span></span><br><span class="line"><span class="function">Rows matched: <span class="number">1</span>  Changed: <span class="number">1</span>  Warnings: <span class="number">0</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">MySQL [mysql]&gt; show master status;</span></span><br><span class="line">+------------------+----------+--------------+------------------+-------------------+</span><br><span class="line">| File             | Position | Binlog_Do_DB | Binlog_Ignore_DB | Executed_Gtid_Set |</span><br><span class="line">+------------------+----------+--------------+------------------+-------------------+</span><br><span class="line">| mysql-bin<span class="number">.000004</span> |    <span class="number">22119</span> |              |                  |                   |</span><br><span class="line">+------------------+----------+--------------+------------------+-------------------+</span><br><span class="line"><span class="number">1</span> <span class="function">row in <span class="title">set</span> <span class="params">(<span class="number">0.00</span> sec)</span></span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line">[root@xxxx ]# /usr/local/mysql/mysql/bin/mysqlbinlog mysql-bin<span class="number">.000004</span> -vv --start-position=<span class="number">21782</span> --stop-position=<span class="number">22119</span> </span><br><span class="line"><span class="comment">/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE=1*/</span>;</span><br><span class="line"><span class="comment">/*!50003 SET @OLD_COMPLETION_TYPE=@@COMPLETION_TYPE,COMPLETION_TYPE=0*/</span>;</span><br><span class="line">DELIMITER <span class="comment">/*!*/</span>;</span><br><span class="line"><span class="meta"># at 4</span></span><br><span class="line">#<span class="number">200731</span> <span class="number">17</span>:<span class="number">36</span>:<span class="number">11</span> server id <span class="number">1</span>  end_log_pos <span class="number">123</span> CRC32 <span class="number">0xb2d914dd</span>  Start: binlog v <span class="number">4</span>, server v <span class="number">5.7</span><span class="number">.24</span>-log created <span class="number">200731</span> <span class="number">17</span>:<span class="number">36</span>:<span class="number">11</span> at startup</span><br><span class="line"># Warning: <span class="keyword">this</span> binlog is either in use <span class="keyword">or</span> was <span class="keyword">not</span> closed properly.</span><br><span class="line">ROLLBACK<span class="comment">/*!*/</span>;</span><br><span class="line">BINLOG &#x27;</span><br><span class="line">C+YjXw8BAAAAdwAAAHsAAAABAAQANS43LjI0LWxvZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA</span><br><span class="line">AAAAAAAAAAAAAAAAAAAL5iNfEzgNAAgAEgAEBAQEEgAAXwAEGggAAAAICAgCAAAACgoKKioAEjQA</span><br><span class="line">Ad0U2bI=</span><br><span class="line">&#x27;/*!*/;</span><br><span class="line"><span class="meta"># at 21782</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">14</span>:<span class="number">37</span>:<span class="number">40</span> server id <span class="number">1</span>  end_log_pos <span class="number">21847</span> CRC32 <span class="number">0x78241dac</span>        Anonymous_GTID  last_committed=<span class="number">78</span>       sequence_number=<span class="number">79</span>      rbr_only=yes</span><br><span class="line"><span class="comment">/*!50718 SET TRANSACTION ISOLATION LEVEL READ COMMITTED*/</span><span class="comment">/*!*/</span>;</span><br><span class="line">SET @@SESSION.GTID_NEXT= &#x27;ANONYMOUS&#x27;/*!*/;</span><br><span class="line"><span class="meta"># at 21847</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">14</span>:<span class="number">37</span>:<span class="number">40</span> server id <span class="number">1</span>  end_log_pos <span class="number">21920</span> CRC32 <span class="number">0xf4915dd7</span>        Query   thread_id=<span class="number">11</span>    exec_time=<span class="number">0</span>     error_code=<span class="number">0</span></span><br><span class="line">SET TIMESTAMP=<span class="number">1597905460</span><span class="comment">/*!*/</span>;</span><br><span class="line">SET @@session.pseudo_thread_id=<span class="number">11</span><span class="comment">/*!*/</span>;</span><br><span class="line">SET @@session.foreign_key_checks=<span class="number">1</span>, @@session.sql_auto_is_null=<span class="number">0</span>, @@session.unique_checks=<span class="number">1</span>, @@session.autocommit=<span class="number">1</span><span class="comment">/*!*/</span>;</span><br><span class="line">SET @@session.sql_mode=<span class="number">1075838976</span><span class="comment">/*!*/</span>;</span><br><span class="line">SET @@session.auto_increment_increment=<span class="number">1</span>, @@session.auto_increment_offset=<span class="number">1</span><span class="comment">/*!*/</span>;</span><br><span class="line"><span class="comment">/*!\C latin1 */</span><span class="comment">/*!*/</span>;</span><br><span class="line">SET @@session.character_set_client=<span class="number">8</span>,@@session.collation_connection=<span class="number">8</span>,@@session.collation_server=<span class="number">8</span><span class="comment">/*!*/</span>;</span><br><span class="line">SET @@session.lc_time_names=<span class="number">0</span><span class="comment">/*!*/</span>;</span><br><span class="line">SET @@session.collation_database=DEFAULT<span class="comment">/*!*/</span>;</span><br><span class="line">BEGIN</span><br><span class="line"><span class="comment">/*!*/</span>;</span><br><span class="line"><span class="meta"># at 21920</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">14</span>:<span class="number">37</span>:<span class="number">40</span> server id <span class="number">1</span>  end_log_pos <span class="number">21978</span> CRC32 <span class="number">0x3308d5eb</span>        Rows_query</span><br><span class="line"><span class="meta"># update tt set d = 200 where id = 2</span></span><br><span class="line"><span class="meta"># at 21978</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">14</span>:<span class="number">37</span>:<span class="number">40</span> server id <span class="number">1</span>  end_log_pos <span class="number">22026</span> CRC32 <span class="number">0x06c85227</span>        Table_map: `mysql`.`tt` mapped to number <span class="number">146</span></span><br><span class="line"><span class="meta"># at 22026</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">14</span>:<span class="number">37</span>:<span class="number">40</span> server id <span class="number">1</span>  end_log_pos <span class="number">22088</span> CRC32 <span class="number">0xd1e44ca1</span>        Update_rows: table id <span class="number">146</span> flags: STMT_END_F</span><br><span class="line"></span><br><span class="line">BINLOG &#x27;</span><br><span class="line">NBo+Xx0BAAAAOgAAANpVAACAACJ1cGRhdGUgdHQgc2V0IGQgPSAyMDAgd2hlcmUgaWQgPSAy69UI</span><br><span class="line">Mw==</span><br><span class="line">NBo+XxMBAAAAMAAAAApWAAAAAJIAAAAAAAEABW15c3FsAAJ0dAADAwMDAAYnUsgG</span><br><span class="line">NBo+Xx8BAAAAPgAAAEhWAAAAAJIAAAAAAAEAAgAD<span class="comment">///4AgAAAAIAAAAUAAAA+AIAAAACAAAAyAAA</span></span><br><span class="line">AKFM5NE=</span><br><span class="line">&#x27;/*!*/;</span><br><span class="line">### UPDATE `mysql`.`tt`</span><br><span class="line">### WHERE</span><br><span class="line">###   @<span class="number">1</span>=<span class="number">2</span> <span class="comment">/* INT meta=0 nullable=0 is_null=0 */</span></span><br><span class="line">###   @<span class="number">2</span>=<span class="number">2</span> <span class="comment">/* INT meta=0 nullable=1 is_null=0 */</span></span><br><span class="line">###   @<span class="number">3</span>=<span class="number">20</span> <span class="comment">/* INT meta=0 nullable=1 is_null=0 */</span></span><br><span class="line">### SET</span><br><span class="line">###   @<span class="number">1</span>=<span class="number">2</span> <span class="comment">/* INT meta=0 nullable=0 is_null=0 */</span></span><br><span class="line">###   @<span class="number">2</span>=<span class="number">2</span> <span class="comment">/* INT meta=0 nullable=1 is_null=0 */</span></span><br><span class="line">###   @<span class="number">3</span>=<span class="number">200</span> <span class="comment">/* INT meta=0 nullable=1 is_null=0 */</span></span><br><span class="line"><span class="meta"># at 22088</span></span><br><span class="line">#<span class="number">200820</span> <span class="number">14</span>:<span class="number">37</span>:<span class="number">40</span> server id <span class="number">1</span>  end_log_pos <span class="number">22119</span> CRC32 <span class="number">0x45b08113</span>        Xid = <span class="number">670</span></span><br><span class="line">COMMIT<span class="comment">/*!*/</span>;</span><br><span class="line">SET @@SESSION.GTID_NEXT= &#x27;AUTOMATIC&#x27; /* added by mysqlbinlog */ /*!*/;</span><br><span class="line">DELIMITER ;</span><br><span class="line"># End of log file</span><br><span class="line"><span class="comment">/*!50003 SET COMPLETION_TYPE=@OLD_COMPLETION_TYPE*/</span>;</span><br><span class="line"><span class="comment">/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE=0*/</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="ending"><a href="#ending" class="headerlink" title="ending"></a>ending</h2>
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2020-08-20-mysql%20binlog/" title="mysql binlog">https://riverferry.site/2020-08-20-mysql binlog/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/mysql/" rel="tag"><i class="fa fa-tags"></i> mysql</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020-08-20-mysql%20slow%20log/" rel="prev" title="mysql slow log">
+      <i class="fa fa-chevron-left"></i> mysql slow log
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020-08-24-mysql%20mvcc/" rel="next" title="mysql mvcc">
+      mysql mvcc <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">参考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E9%85%8D%E7%BD%AE%E4%BF%A1%E6%81%AF"><span class="nav-number">2.</span> <span class="nav-text">查看配置信息</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E5%90%AB%E4%B9%89"><span class="nav-number">3.</span> <span class="nav-text">参数含义</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#binlog-format"><span class="nav-number">3.1.</span> <span class="nav-text">binlog_format</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#binlog-rows-query-log-events"><span class="nav-number">3.2.</span> <span class="nav-text">binlog_rows_query_log_events</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E5%B9%B6%E4%BF%AE%E6%94%B9binlog-rows-query-log-events"><span class="nav-number">3.2.1.</span> <span class="nav-text">查看并修改binlog_rows_query_log_events</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#dml%E6%9F%A5%E7%9C%8Bbinlog%E6%89%93%E5%8D%B0%E7%BB%93%E6%9E%9C"><span class="nav-number">3.2.2.</span> <span class="nav-text">dml查看binlog打印结果</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ending"><span class="nav-number">4.</span> <span class="nav-text">ending</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : 'e72bee1a8ab616d449f8723a1ed402b5',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="参考Centos7安装及使用webbench进行并发测试 EZLippi&#x2F;WebBench 下载地址">
+<meta property="og:type" content="article">
+<meta property="og:title" content="webbench">
+<meta property="og:url" content="https://riverferry.site/2020-03-24-webbench/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="参考Centos7安装及使用webbench进行并发测试 EZLippi&#x2F;WebBench 下载地址">
+<meta property="og:locale">
+<meta property="og:image" content="https://i.loli.net/2020/03/31/b89ZDVyHdtYLIRX.jpg">
+<meta property="article:published_time" content="2020-03-24T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.279Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="tool">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/03/31/b89ZDVyHdtYLIRX.jpg">
+
+<link rel="canonical" href="https://riverferry.site/2020-03-24-webbench/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>webbench | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2020-03-24-webbench/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          webbench
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-03-24 00:00:00" itemprop="dateCreated datePublished" datetime="2020-03-24T00:00:00+00:00">2020-03-24</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>13k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>12 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/leejianjun/article/details/48020147">Centos7安装及使用webbench进行并发测试</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/EZLippi/WebBench">EZLippi/WebBench</a></p>
+<p><a target="_blank" rel="noopener" href="http://home.tiscali.cz/~cz210552/webbench.html">下载地址</a></p>
+<a id="more"></a>
+
+<h2 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h2><p>Web Bench是用于基准测试WWW或代理服务器的非常简单的工具。使用fork（）模拟多个客户端，并可以使用HTTP / 0.9-HTTP / 1.1请求。该基准不是很现实，但是它可以测试HTTPD是否确实可以一次处理多个客户端（尝试运行一些CGI）而不会导致计算机停机。显示页面/分钟和字节/秒。可以在带有-f开关的更激进的模式下使用。</p>
+<h2 id="基本原理"><a href="#基本原理" class="headerlink" title="基本原理"></a>基本原理</h2><p>webbench首先fork出多个子进程，每个子进程都循环做web访问测试。子进程把访问的结果通过pipe告诉父进程，父进程做最终的统计结果。</p>
+<h2 id="参数说明"><a href="#参数说明" class="headerlink" title="参数说明"></a>参数说明</h2><table>
+    <thead align="center">
+        <tr>
+            <th style="text-align:center">参数</th>
+            <th style="text-align:center">说明</th>
+        </tr>
+    </thead>
+    <tbody align="center">
+        <tr>
+            <td>-V</td>
+            <td>显示版本号</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>-t</td>
+            <td>运行webbench的时间,单位：秒</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>-c</td>
+            <td>创建多少个客户端，默认1个</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>-f</td>
+            <td>不需要等待服务器响应</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2 id="源码"><a href="#源码" class="headerlink" title="源码"></a>源码</h2><h3 id="webbench-c"><a href="#webbench-c" class="headerlink" title="webbench.c"></a>webbench.c</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br><span class="line">306</span><br><span class="line">307</span><br><span class="line">308</span><br><span class="line">309</span><br><span class="line">310</span><br><span class="line">311</span><br><span class="line">312</span><br><span class="line">313</span><br><span class="line">314</span><br><span class="line">315</span><br><span class="line">316</span><br><span class="line">317</span><br><span class="line">318</span><br><span class="line">319</span><br><span class="line">320</span><br><span class="line">321</span><br><span class="line">322</span><br><span class="line">323</span><br><span class="line">324</span><br><span class="line">325</span><br><span class="line">326</span><br><span class="line">327</span><br><span class="line">328</span><br><span class="line">329</span><br><span class="line">330</span><br><span class="line">331</span><br><span class="line">332</span><br><span class="line">333</span><br><span class="line">334</span><br><span class="line">335</span><br><span class="line">336</span><br><span class="line">337</span><br><span class="line">338</span><br><span class="line">339</span><br><span class="line">340</span><br><span class="line">341</span><br><span class="line">342</span><br><span class="line">343</span><br><span class="line">344</span><br><span class="line">345</span><br><span class="line">346</span><br><span class="line">347</span><br><span class="line">348</span><br><span class="line">349</span><br><span class="line">350</span><br><span class="line">351</span><br><span class="line">352</span><br><span class="line">353</span><br><span class="line">354</span><br><span class="line">355</span><br><span class="line">356</span><br><span class="line">357</span><br><span class="line">358</span><br><span class="line">359</span><br><span class="line">360</span><br><span class="line">361</span><br><span class="line">362</span><br><span class="line">363</span><br><span class="line">364</span><br><span class="line">365</span><br><span class="line">366</span><br><span class="line">367</span><br><span class="line">368</span><br><span class="line">369</span><br><span class="line">370</span><br><span class="line">371</span><br><span class="line">372</span><br><span class="line">373</span><br><span class="line">374</span><br><span class="line">375</span><br><span class="line">376</span><br><span class="line">377</span><br><span class="line">378</span><br><span class="line">379</span><br><span class="line">380</span><br><span class="line">381</span><br><span class="line">382</span><br><span class="line">383</span><br><span class="line">384</span><br><span class="line">385</span><br><span class="line">386</span><br><span class="line">387</span><br><span class="line">388</span><br><span class="line">389</span><br><span class="line">390</span><br><span class="line">391</span><br><span class="line">392</span><br><span class="line">393</span><br><span class="line">394</span><br><span class="line">395</span><br><span class="line">396</span><br><span class="line">397</span><br><span class="line">398</span><br><span class="line">399</span><br><span class="line">400</span><br><span class="line">401</span><br><span class="line">402</span><br><span class="line">403</span><br><span class="line">404</span><br><span class="line">405</span><br><span class="line">406</span><br><span class="line">407</span><br><span class="line">408</span><br><span class="line">409</span><br><span class="line">410</span><br><span class="line">411</span><br><span class="line">412</span><br><span class="line">413</span><br><span class="line">414</span><br><span class="line">415</span><br><span class="line">416</span><br><span class="line">417</span><br><span class="line">418</span><br><span class="line">419</span><br><span class="line">420</span><br><span class="line">421</span><br><span class="line">422</span><br><span class="line">423</span><br><span class="line">424</span><br><span class="line">425</span><br><span class="line">426</span><br><span class="line">427</span><br><span class="line">428</span><br><span class="line">429</span><br><span class="line">430</span><br><span class="line">431</span><br><span class="line">432</span><br><span class="line">433</span><br><span class="line">434</span><br><span class="line">435</span><br><span class="line">436</span><br><span class="line">437</span><br><span class="line">438</span><br><span class="line">439</span><br><span class="line">440</span><br><span class="line">441</span><br><span class="line">442</span><br><span class="line">443</span><br><span class="line">444</span><br><span class="line">445</span><br><span class="line">446</span><br><span class="line">447</span><br><span class="line">448</span><br><span class="line">449</span><br><span class="line">450</span><br><span class="line">451</span><br><span class="line">452</span><br><span class="line">453</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * (C) Radim Kolar 1997-2004</span></span><br><span class="line"><span class="comment"> * This is free software, see GNU Public License version 2 for</span></span><br><span class="line"><span class="comment"> * details.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Simple forking WWW Server benchmark:</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Usage:</span></span><br><span class="line"><span class="comment"> *   webbench --help</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Return codes:</span></span><br><span class="line"><span class="comment"> *    0 - sucess</span></span><br><span class="line"><span class="comment"> *    1 - benchmark failed (server is not on-line)</span></span><br><span class="line"><span class="comment"> *    2 - bad param</span></span><br><span class="line"><span class="comment"> *    3 - internal error, fork failed</span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> */</span> </span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;socket.c&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/param.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;rpc/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;getopt.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;strings.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;time.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;signal.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* values */</span></span><br><span class="line"><span class="keyword">volatile</span> <span class="keyword">int</span> timerexpired=<span class="number">0</span>;</span><br><span class="line"><span class="keyword">int</span> speed=<span class="number">0</span>;</span><br><span class="line"><span class="keyword">int</span> failed=<span class="number">0</span>;</span><br><span class="line"><span class="keyword">int</span> bytes=<span class="number">0</span>;</span><br><span class="line"><span class="comment">/* globals */</span></span><br><span class="line"><span class="keyword">int</span> http10=<span class="number">1</span>; <span class="comment">/* 0 - http/0.9, 1 - http/1.0, 2 - http/1.1 */</span></span><br><span class="line"><span class="comment">/* Allow: GET, HEAD, OPTIONS, TRACE */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> METHOD_GET 0</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> METHOD_HEAD 1</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> METHOD_OPTIONS 2</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> METHOD_TRACE 3</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PROGRAM_VERSION <span class="meta-string">&quot;1.5&quot;</span></span></span><br><span class="line"><span class="keyword">int</span> method=METHOD_GET;</span><br><span class="line"><span class="keyword">int</span> clients=<span class="number">1</span>;</span><br><span class="line"><span class="keyword">int</span> force=<span class="number">0</span>;</span><br><span class="line"><span class="keyword">int</span> force_reload=<span class="number">0</span>;</span><br><span class="line"><span class="keyword">int</span> proxyport=<span class="number">80</span>;</span><br><span class="line"><span class="keyword">char</span> *proxyhost=<span class="literal">NULL</span>;</span><br><span class="line"><span class="keyword">int</span> benchtime=<span class="number">30</span>;</span><br><span class="line"><span class="comment">/* internal */</span></span><br><span class="line"><span class="keyword">int</span> mypipe[<span class="number">2</span>];</span><br><span class="line"><span class="keyword">char</span> host[MAXHOSTNAMELEN];</span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REQUEST_SIZE 2048</span></span><br><span class="line"><span class="keyword">char</span> request[REQUEST_SIZE];</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">option</span> <span class="title">long_options</span>[]=</span></span><br><span class="line">&#123;</span><br><span class="line"> &#123;<span class="string">&quot;force&quot;</span>,no_argument,&amp;force,<span class="number">1</span>&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;reload&quot;</span>,no_argument,&amp;force_reload,<span class="number">1</span>&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;time&quot;</span>,required_argument,<span class="literal">NULL</span>,<span class="string">&#x27;t&#x27;</span>&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;help&quot;</span>,no_argument,<span class="literal">NULL</span>,<span class="string">&#x27;?&#x27;</span>&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;http09&quot;</span>,no_argument,<span class="literal">NULL</span>,<span class="string">&#x27;9&#x27;</span>&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;http10&quot;</span>,no_argument,<span class="literal">NULL</span>,<span class="string">&#x27;1&#x27;</span>&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;http11&quot;</span>,no_argument,<span class="literal">NULL</span>,<span class="string">&#x27;2&#x27;</span>&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;get&quot;</span>,no_argument,&amp;method,METHOD_GET&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;head&quot;</span>,no_argument,&amp;method,METHOD_HEAD&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;options&quot;</span>,no_argument,&amp;method,METHOD_OPTIONS&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;trace&quot;</span>,no_argument,&amp;method,METHOD_TRACE&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;version&quot;</span>,no_argument,<span class="literal">NULL</span>,<span class="string">&#x27;V&#x27;</span>&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;proxy&quot;</span>,required_argument,<span class="literal">NULL</span>,<span class="string">&#x27;p&#x27;</span>&#125;,</span><br><span class="line"> &#123;<span class="string">&quot;clients&quot;</span>,required_argument,<span class="literal">NULL</span>,<span class="string">&#x27;c&#x27;</span>&#125;,</span><br><span class="line"> &#123;<span class="literal">NULL</span>,<span class="number">0</span>,<span class="literal">NULL</span>,<span class="number">0</span>&#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* prototypes */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">benchcore</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span>* host,<span class="keyword">const</span> <span class="keyword">int</span> port, <span class="keyword">const</span> <span class="keyword">char</span> *request)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">bench</span><span class="params">(<span class="keyword">void</span>)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">build_request</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *url)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">alarm_handler</span><span class="params">(<span class="keyword">int</span> signal)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">   timerexpired=<span class="number">1</span>;</span><br><span class="line">&#125;	</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">usage</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">   <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>,</span><br><span class="line">	<span class="string">&quot;webbench [option]... URL\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  -f|--force               Don&#x27;t wait for reply from server.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  -r|--reload              Send reload request - Pragma: no-cache.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  -t|--time &lt;sec&gt;          Run benchmark for &lt;sec&gt; seconds. Default 30.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  -p|--proxy &lt;server:port&gt; Use proxy server for request.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  -c|--clients &lt;n&gt;         Run &lt;n&gt; HTTP clients at once. Default one.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  -9|--http09              Use HTTP/0.9 style requests.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  -1|--http10              Use HTTP/1.0 protocol.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  -2|--http11              Use HTTP/1.1 protocol.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  --get                    Use GET request method.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  --head                   Use HEAD request method.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  --options                Use OPTIONS request method.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  --trace                  Use TRACE request method.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  -?|-h|--help             This information.\n&quot;</span></span><br><span class="line">	<span class="string">&quot;  -V|--version             Display program version.\n&quot;</span></span><br><span class="line">	);</span><br><span class="line">&#125;;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line"> <span class="keyword">int</span> opt=<span class="number">0</span>;</span><br><span class="line"> <span class="keyword">int</span> options_index=<span class="number">0</span>;</span><br><span class="line"> <span class="keyword">char</span> *tmp=<span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">if</span>(argc==<span class="number">1</span>)</span><br><span class="line"> &#123;</span><br><span class="line">	  usage();</span><br><span class="line">          <span class="keyword">return</span> <span class="number">2</span>;</span><br><span class="line"> &#125; </span><br><span class="line"></span><br><span class="line"> <span class="keyword">while</span>((opt=getopt_long(argc,argv,<span class="string">&quot;912Vfrt:p:c:?h&quot;</span>,long_options,&amp;options_index))!=EOF )</span><br><span class="line"> &#123;</span><br><span class="line">  <span class="keyword">switch</span>(opt)</span><br><span class="line">  &#123;</span><br><span class="line">   <span class="keyword">case</span>  <span class="number">0</span> : <span class="keyword">break</span>;</span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;f&#x27;</span>: force=<span class="number">1</span>;<span class="keyword">break</span>;</span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;r&#x27;</span>: force_reload=<span class="number">1</span>;<span class="keyword">break</span>; </span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;9&#x27;</span>: http10=<span class="number">0</span>;<span class="keyword">break</span>;</span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;1&#x27;</span>: http10=<span class="number">1</span>;<span class="keyword">break</span>;</span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;2&#x27;</span>: http10=<span class="number">2</span>;<span class="keyword">break</span>;</span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;V&#x27;</span>: <span class="built_in">printf</span>(PROGRAM_VERSION<span class="string">&quot;\n&quot;</span>);<span class="built_in">exit</span>(<span class="number">0</span>);</span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;t&#x27;</span>: benchtime=atoi(optarg);<span class="keyword">break</span>;	     </span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;p&#x27;</span>: </span><br><span class="line">	     <span class="comment">/* proxy server parsing server:port */</span></span><br><span class="line">	     tmp=<span class="built_in">strrchr</span>(optarg,<span class="string">&#x27;:&#x27;</span>);</span><br><span class="line">	     proxyhost=optarg;</span><br><span class="line">	     <span class="keyword">if</span>(tmp==<span class="literal">NULL</span>)</span><br><span class="line">	     &#123;</span><br><span class="line">		     <span class="keyword">break</span>;</span><br><span class="line">	     &#125;</span><br><span class="line">	     <span class="keyword">if</span>(tmp==optarg)</span><br><span class="line">	     &#123;</span><br><span class="line">		     <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>,<span class="string">&quot;Error in option --proxy %s: Missing hostname.\n&quot;</span>,optarg);</span><br><span class="line">		     <span class="keyword">return</span> <span class="number">2</span>;</span><br><span class="line">	     &#125;</span><br><span class="line">	     <span class="keyword">if</span>(tmp==optarg+<span class="built_in">strlen</span>(optarg)<span class="number">-1</span>)</span><br><span class="line">	     &#123;</span><br><span class="line">		     <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>,<span class="string">&quot;Error in option --proxy %s Port number is missing.\n&quot;</span>,optarg);</span><br><span class="line">		     <span class="keyword">return</span> <span class="number">2</span>;</span><br><span class="line">	     &#125;</span><br><span class="line">	     *tmp=<span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line">	     proxyport=atoi(tmp+<span class="number">1</span>);<span class="keyword">break</span>;</span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;:&#x27;</span>:</span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;h&#x27;</span>:</span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;?&#x27;</span>: usage();<span class="keyword">return</span> <span class="number">2</span>;<span class="keyword">break</span>;</span><br><span class="line">   <span class="keyword">case</span> <span class="string">&#x27;c&#x27;</span>: clients=atoi(optarg);<span class="keyword">break</span>;</span><br><span class="line">  &#125;</span><br><span class="line"> &#125;</span><br><span class="line"> </span><br><span class="line"> <span class="keyword">if</span>(optind==argc) &#123;</span><br><span class="line">                      <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>,<span class="string">&quot;webbench: Missing URL!\n&quot;</span>);</span><br><span class="line">		      usage();</span><br><span class="line">		      <span class="keyword">return</span> <span class="number">2</span>;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">if</span>(clients==<span class="number">0</span>) clients=<span class="number">1</span>;</span><br><span class="line"> <span class="keyword">if</span>(benchtime==<span class="number">0</span>) benchtime=<span class="number">60</span>;</span><br><span class="line"> <span class="comment">/* Copyright */</span></span><br><span class="line"> <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>,<span class="string">&quot;Webbench - Simple Web Benchmark &quot;</span>PROGRAM_VERSION<span class="string">&quot;\n&quot;</span></span><br><span class="line">	 <span class="string">&quot;Copyright (c) Radim Kolar 1997-2004, GPL Open Source Software.\n&quot;</span></span><br><span class="line">	 );</span><br><span class="line"> build_request(argv[optind]);</span><br><span class="line"> <span class="comment">/* print bench info */</span></span><br><span class="line"> <span class="built_in">printf</span>(<span class="string">&quot;\nBenchmarking: &quot;</span>);</span><br><span class="line"> <span class="keyword">switch</span>(method)</span><br><span class="line"> &#123;</span><br><span class="line">	 <span class="keyword">case</span> METHOD_GET:</span><br><span class="line">	 <span class="keyword">default</span>:</span><br><span class="line">		 <span class="built_in">printf</span>(<span class="string">&quot;GET&quot;</span>);<span class="keyword">break</span>;</span><br><span class="line">	 <span class="keyword">case</span> METHOD_OPTIONS:</span><br><span class="line">		 <span class="built_in">printf</span>(<span class="string">&quot;OPTIONS&quot;</span>);<span class="keyword">break</span>;</span><br><span class="line">	 <span class="keyword">case</span> METHOD_HEAD:</span><br><span class="line">		 <span class="built_in">printf</span>(<span class="string">&quot;HEAD&quot;</span>);<span class="keyword">break</span>;</span><br><span class="line">	 <span class="keyword">case</span> METHOD_TRACE:</span><br><span class="line">		 <span class="built_in">printf</span>(<span class="string">&quot;TRACE&quot;</span>);<span class="keyword">break</span>;</span><br><span class="line"> &#125;</span><br><span class="line"> <span class="built_in">printf</span>(<span class="string">&quot; %s&quot;</span>,argv[optind]);</span><br><span class="line"> <span class="keyword">switch</span>(http10)</span><br><span class="line"> &#123;</span><br><span class="line">	 <span class="keyword">case</span> <span class="number">0</span>: <span class="built_in">printf</span>(<span class="string">&quot; (using HTTP/0.9)&quot;</span>);<span class="keyword">break</span>;</span><br><span class="line">	 <span class="keyword">case</span> <span class="number">2</span>: <span class="built_in">printf</span>(<span class="string">&quot; (using HTTP/1.1)&quot;</span>);<span class="keyword">break</span>;</span><br><span class="line"> &#125;</span><br><span class="line"> <span class="built_in">printf</span>(<span class="string">&quot;\n&quot;</span>);</span><br><span class="line"> <span class="keyword">if</span>(clients==<span class="number">1</span>) <span class="built_in">printf</span>(<span class="string">&quot;1 client&quot;</span>);</span><br><span class="line"> <span class="keyword">else</span></span><br><span class="line">   <span class="built_in">printf</span>(<span class="string">&quot;%d clients&quot;</span>,clients);</span><br><span class="line"></span><br><span class="line"> <span class="built_in">printf</span>(<span class="string">&quot;, running %d sec&quot;</span>, benchtime);</span><br><span class="line"> <span class="keyword">if</span>(force) <span class="built_in">printf</span>(<span class="string">&quot;, early socket close&quot;</span>);</span><br><span class="line"> <span class="keyword">if</span>(proxyhost!=<span class="literal">NULL</span>) <span class="built_in">printf</span>(<span class="string">&quot;, via proxy server %s:%d&quot;</span>,proxyhost,proxyport);</span><br><span class="line"> <span class="keyword">if</span>(force_reload) <span class="built_in">printf</span>(<span class="string">&quot;, forcing reload&quot;</span>);</span><br><span class="line"> <span class="built_in">printf</span>(<span class="string">&quot;.\n&quot;</span>);</span><br><span class="line"> <span class="keyword">return</span> bench();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">build_request</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *url)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">char</span> tmp[<span class="number">10</span>];</span><br><span class="line">  <span class="keyword">int</span> i;</span><br><span class="line"></span><br><span class="line">  bzero(host,MAXHOSTNAMELEN);</span><br><span class="line">  bzero(request,REQUEST_SIZE);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span>(force_reload &amp;&amp; proxyhost!=<span class="literal">NULL</span> &amp;&amp; http10&lt;<span class="number">1</span>) http10=<span class="number">1</span>;</span><br><span class="line">  <span class="keyword">if</span>(method==METHOD_HEAD &amp;&amp; http10&lt;<span class="number">1</span>) http10=<span class="number">1</span>;</span><br><span class="line">  <span class="keyword">if</span>(method==METHOD_OPTIONS &amp;&amp; http10&lt;<span class="number">2</span>) http10=<span class="number">2</span>;</span><br><span class="line">  <span class="keyword">if</span>(method==METHOD_TRACE &amp;&amp; http10&lt;<span class="number">2</span>) http10=<span class="number">2</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">switch</span>(method)</span><br><span class="line">  &#123;</span><br><span class="line">	  <span class="keyword">default</span>:</span><br><span class="line">	  <span class="keyword">case</span> METHOD_GET: <span class="built_in">strcpy</span>(request,<span class="string">&quot;GET&quot;</span>);<span class="keyword">break</span>;</span><br><span class="line">	  <span class="keyword">case</span> METHOD_HEAD: <span class="built_in">strcpy</span>(request,<span class="string">&quot;HEAD&quot;</span>);<span class="keyword">break</span>;</span><br><span class="line">	  <span class="keyword">case</span> METHOD_OPTIONS: <span class="built_in">strcpy</span>(request,<span class="string">&quot;OPTIONS&quot;</span>);<span class="keyword">break</span>;</span><br><span class="line">	  <span class="keyword">case</span> METHOD_TRACE: <span class="built_in">strcpy</span>(request,<span class="string">&quot;TRACE&quot;</span>);<span class="keyword">break</span>;</span><br><span class="line">  &#125;</span><br><span class="line">		  </span><br><span class="line">  <span class="built_in">strcat</span>(request,<span class="string">&quot; &quot;</span>);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span>(<span class="literal">NULL</span>==<span class="built_in">strstr</span>(url,<span class="string">&quot;://&quot;</span>))</span><br><span class="line">  &#123;</span><br><span class="line">	  <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">&quot;\n%s: is not a valid URL.\n&quot;</span>,url);</span><br><span class="line">	  <span class="built_in">exit</span>(<span class="number">2</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span>(<span class="built_in">strlen</span>(url)&gt;<span class="number">1500</span>)</span><br><span class="line">  &#123;</span><br><span class="line">         <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>,<span class="string">&quot;URL is too long.\n&quot;</span>);</span><br><span class="line">	 <span class="built_in">exit</span>(<span class="number">2</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span>(proxyhost==<span class="literal">NULL</span>)</span><br><span class="line">	   <span class="keyword">if</span> (<span class="number">0</span>!=strncasecmp(<span class="string">&quot;http://&quot;</span>,url,<span class="number">7</span>)) </span><br><span class="line">	   &#123; <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>,<span class="string">&quot;\nOnly HTTP protocol is directly supported, set --proxy for others.\n&quot;</span>);</span><br><span class="line">             <span class="built_in">exit</span>(<span class="number">2</span>);</span><br><span class="line">           &#125;</span><br><span class="line">  <span class="comment">/* protocol/host delimiter */</span></span><br><span class="line">  i=<span class="built_in">strstr</span>(url,<span class="string">&quot;://&quot;</span>)-url+<span class="number">3</span>;</span><br><span class="line">  <span class="comment">/* printf(&quot;%d\n&quot;,i); */</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span>(<span class="built_in">strchr</span>(url+i,<span class="string">&#x27;/&#x27;</span>)==<span class="literal">NULL</span>) &#123;</span><br><span class="line">                                <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>,<span class="string">&quot;\nInvalid URL syntax - hostname don&#x27;t ends with &#x27;/&#x27;.\n&quot;</span>);</span><br><span class="line">                                <span class="built_in">exit</span>(<span class="number">2</span>);</span><br><span class="line">                              &#125;</span><br><span class="line">  <span class="keyword">if</span>(proxyhost==<span class="literal">NULL</span>)</span><br><span class="line">  &#123;</span><br><span class="line">   <span class="comment">/* get port from hostname */</span></span><br><span class="line">   <span class="keyword">if</span>(index(url+i,<span class="string">&#x27;:&#x27;</span>)!=<span class="literal">NULL</span> &amp;&amp;</span><br><span class="line">      index(url+i,<span class="string">&#x27;:&#x27;</span>)&lt;index(url+i,<span class="string">&#x27;/&#x27;</span>))</span><br><span class="line">   &#123;</span><br><span class="line">	   <span class="built_in">strncpy</span>(host,url+i,<span class="built_in">strchr</span>(url+i,<span class="string">&#x27;:&#x27;</span>)-url-i);</span><br><span class="line">	   bzero(tmp,<span class="number">10</span>);</span><br><span class="line">	   <span class="built_in">strncpy</span>(tmp,index(url+i,<span class="string">&#x27;:&#x27;</span>)+<span class="number">1</span>,<span class="built_in">strchr</span>(url+i,<span class="string">&#x27;/&#x27;</span>)-index(url+i,<span class="string">&#x27;:&#x27;</span>)<span class="number">-1</span>);</span><br><span class="line">	   <span class="comment">/* printf(&quot;tmp=%s\n&quot;,tmp); */</span></span><br><span class="line">	   proxyport=atoi(tmp);</span><br><span class="line">	   <span class="keyword">if</span>(proxyport==<span class="number">0</span>) proxyport=<span class="number">80</span>;</span><br><span class="line">   &#125; <span class="keyword">else</span></span><br><span class="line">   &#123;</span><br><span class="line">     <span class="built_in">strncpy</span>(host,url+i,<span class="built_in">strcspn</span>(url+i,<span class="string">&quot;/&quot;</span>));</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="comment">// printf(&quot;Host=%s\n&quot;,host);</span></span><br><span class="line">   <span class="built_in">strcat</span>(request+<span class="built_in">strlen</span>(request),url+i+<span class="built_in">strcspn</span>(url+i,<span class="string">&quot;/&quot;</span>));</span><br><span class="line">  &#125; <span class="keyword">else</span></span><br><span class="line">  &#123;</span><br><span class="line">   <span class="comment">// printf(&quot;ProxyHost=%s\nProxyPort=%d\n&quot;,proxyhost,proxyport);</span></span><br><span class="line">   <span class="built_in">strcat</span>(request,url);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span>(http10==<span class="number">1</span>)</span><br><span class="line">	  <span class="built_in">strcat</span>(request,<span class="string">&quot; HTTP/1.0&quot;</span>);</span><br><span class="line">  <span class="keyword">else</span> <span class="keyword">if</span> (http10==<span class="number">2</span>)</span><br><span class="line">	  <span class="built_in">strcat</span>(request,<span class="string">&quot; HTTP/1.1&quot;</span>);</span><br><span class="line">  <span class="built_in">strcat</span>(request,<span class="string">&quot;\r\n&quot;</span>);</span><br><span class="line">  <span class="keyword">if</span>(http10&gt;<span class="number">0</span>)</span><br><span class="line">	  <span class="built_in">strcat</span>(request,<span class="string">&quot;User-Agent: WebBench &quot;</span>PROGRAM_VERSION<span class="string">&quot;\r\n&quot;</span>);</span><br><span class="line">  <span class="keyword">if</span>(proxyhost==<span class="literal">NULL</span> &amp;&amp; http10&gt;<span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">	  <span class="built_in">strcat</span>(request,<span class="string">&quot;Host: &quot;</span>);</span><br><span class="line">	  <span class="built_in">strcat</span>(request,host);</span><br><span class="line">	  <span class="built_in">strcat</span>(request,<span class="string">&quot;\r\n&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span>(force_reload &amp;&amp; proxyhost!=<span class="literal">NULL</span>)</span><br><span class="line">  &#123;</span><br><span class="line">	  <span class="built_in">strcat</span>(request,<span class="string">&quot;Pragma: no-cache\r\n&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span>(http10&gt;<span class="number">1</span>)</span><br><span class="line">	  <span class="built_in">strcat</span>(request,<span class="string">&quot;Connection: close\r\n&quot;</span>);</span><br><span class="line">  <span class="comment">/* add empty line at end */</span></span><br><span class="line">  <span class="keyword">if</span>(http10&gt;<span class="number">0</span>) <span class="built_in">strcat</span>(request,<span class="string">&quot;\r\n&quot;</span>); </span><br><span class="line">  <span class="comment">// printf(&quot;Req=%s\n&quot;,request);</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* vraci system rc error kod */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">bench</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">int</span> i,j,k;	</span><br><span class="line">  <span class="keyword">pid_t</span> pid=<span class="number">0</span>;</span><br><span class="line">  FILE *f;</span><br><span class="line"></span><br><span class="line">  <span class="comment">/* check avaibility of target server */</span></span><br><span class="line">  i=Socket(proxyhost==<span class="literal">NULL</span>?host:proxyhost,proxyport);</span><br><span class="line">  <span class="keyword">if</span>(i&lt;<span class="number">0</span>) &#123; </span><br><span class="line">	   <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>,<span class="string">&quot;\nConnect to server failed. Aborting benchmark.\n&quot;</span>);</span><br><span class="line">           <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">         &#125;</span><br><span class="line">  close(i);</span><br><span class="line">  <span class="comment">/* create pipe */</span></span><br><span class="line">  <span class="keyword">if</span>(pipe(mypipe))</span><br><span class="line">  &#123;</span><br><span class="line">	  perror(<span class="string">&quot;pipe failed.&quot;</span>);</span><br><span class="line">	  <span class="keyword">return</span> <span class="number">3</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">/* not needed, since we have alarm() in childrens */</span></span><br><span class="line">  <span class="comment">/* wait 4 next system clock tick */</span></span><br><span class="line">  <span class="comment">/*</span></span><br><span class="line"><span class="comment">  cas=time(NULL);</span></span><br><span class="line"><span class="comment">  while(time(NULL)==cas)</span></span><br><span class="line"><span class="comment">        sched_yield();</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"></span><br><span class="line">  <span class="comment">/* fork childs */</span></span><br><span class="line">  <span class="keyword">for</span>(i=<span class="number">0</span>;i&lt;clients;i++)</span><br><span class="line">  &#123;</span><br><span class="line">	   pid=fork();</span><br><span class="line">	   <span class="keyword">if</span>(pid &lt;= (<span class="keyword">pid_t</span>) <span class="number">0</span>)</span><br><span class="line">	   &#123;</span><br><span class="line">		   <span class="comment">/* child process or error*/</span></span><br><span class="line">	           sleep(<span class="number">1</span>); <span class="comment">/* make childs faster */</span></span><br><span class="line">		   <span class="keyword">break</span>;</span><br><span class="line">	   &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span>( pid&lt; (<span class="keyword">pid_t</span>) <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">          <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>,<span class="string">&quot;problems forking worker no. %d\n&quot;</span>,i);</span><br><span class="line">	  perror(<span class="string">&quot;fork failed.&quot;</span>);</span><br><span class="line">	  <span class="keyword">return</span> <span class="number">3</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span>(pid== (<span class="keyword">pid_t</span>) <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">    <span class="comment">/* I am a child */</span></span><br><span class="line">    <span class="keyword">if</span>(proxyhost==<span class="literal">NULL</span>)</span><br><span class="line">      benchcore(host,proxyport,request);</span><br><span class="line">         <span class="keyword">else</span></span><br><span class="line">      benchcore(proxyhost,proxyport,request);</span><br><span class="line"></span><br><span class="line">         <span class="comment">/* write results to pipe */</span></span><br><span class="line">	 f=fdopen(mypipe[<span class="number">1</span>],<span class="string">&quot;w&quot;</span>);</span><br><span class="line">	 <span class="keyword">if</span>(f==<span class="literal">NULL</span>)</span><br><span class="line">	 &#123;</span><br><span class="line">		 perror(<span class="string">&quot;open pipe for writing failed.&quot;</span>);</span><br><span class="line">		 <span class="keyword">return</span> <span class="number">3</span>;</span><br><span class="line">	 &#125;</span><br><span class="line">	 <span class="comment">/* fprintf(stderr,&quot;Child - %d %d\n&quot;,speed,failed); */</span></span><br><span class="line">	 <span class="built_in">fprintf</span>(f,<span class="string">&quot;%d %d %d\n&quot;</span>,speed,failed,bytes);</span><br><span class="line">	 fclose(f);</span><br><span class="line">	 <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">  &#125; <span class="keyword">else</span></span><br><span class="line">  &#123;</span><br><span class="line">	  f=fdopen(mypipe[<span class="number">0</span>],<span class="string">&quot;r&quot;</span>);</span><br><span class="line">	  <span class="keyword">if</span>(f==<span class="literal">NULL</span>) </span><br><span class="line">	  &#123;</span><br><span class="line">		  perror(<span class="string">&quot;open pipe for reading failed.&quot;</span>);</span><br><span class="line">		  <span class="keyword">return</span> <span class="number">3</span>;</span><br><span class="line">	  &#125;</span><br><span class="line">	  setvbuf(f,<span class="literal">NULL</span>,_IONBF,<span class="number">0</span>);</span><br><span class="line">	  speed=<span class="number">0</span>;</span><br><span class="line">          failed=<span class="number">0</span>;</span><br><span class="line">          bytes=<span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	  <span class="keyword">while</span>(<span class="number">1</span>)</span><br><span class="line">	  &#123;</span><br><span class="line">		  pid=<span class="built_in">fscanf</span>(f,<span class="string">&quot;%d %d %d&quot;</span>,&amp;i,&amp;j,&amp;k);</span><br><span class="line">		  <span class="keyword">if</span>(pid&lt;<span class="number">2</span>)</span><br><span class="line">                  &#123;</span><br><span class="line">                       <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>,<span class="string">&quot;Some of our childrens died.\n&quot;</span>);</span><br><span class="line">                       <span class="keyword">break</span>;</span><br><span class="line">                  &#125;</span><br><span class="line">		  speed+=i;</span><br><span class="line">		  failed+=j;</span><br><span class="line">		  bytes+=k;</span><br><span class="line">		  <span class="comment">/* fprintf(stderr,&quot;*Knock* %d %d read=%d\n&quot;,speed,failed,pid); */</span></span><br><span class="line">		  <span class="keyword">if</span>(--clients==<span class="number">0</span>) <span class="keyword">break</span>;</span><br><span class="line">	  &#125;</span><br><span class="line">	  fclose(f);</span><br><span class="line"></span><br><span class="line">  <span class="built_in">printf</span>(<span class="string">&quot;\nSpeed=%d pages/min, %d bytes/sec.\nRequests: %d susceed, %d failed.\n&quot;</span>,</span><br><span class="line">		  (<span class="keyword">int</span>)((speed+failed)/(benchtime/<span class="number">60.0f</span>)),</span><br><span class="line">		  (<span class="keyword">int</span>)(bytes/(<span class="keyword">float</span>)benchtime),</span><br><span class="line">		  speed,</span><br><span class="line">		  failed);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> i;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">benchcore</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *host,<span class="keyword">const</span> <span class="keyword">int</span> port,<span class="keyword">const</span> <span class="keyword">char</span> *req)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line"> <span class="keyword">int</span> rlen;</span><br><span class="line"> <span class="keyword">char</span> buf[<span class="number">1500</span>];</span><br><span class="line"> <span class="keyword">int</span> s,i;</span><br><span class="line"> <span class="class"><span class="keyword">struct</span> <span class="title">sigaction</span> <span class="title">sa</span>;</span></span><br><span class="line"></span><br><span class="line"> <span class="comment">/* setup alarm signal handler */</span></span><br><span class="line"> sa.sa_handler=alarm_handler;</span><br><span class="line"> sa.sa_flags=<span class="number">0</span>;</span><br><span class="line"> <span class="keyword">if</span>(sigaction(SIGALRM,&amp;sa,<span class="literal">NULL</span>))</span><br><span class="line">    <span class="built_in">exit</span>(<span class="number">3</span>);</span><br><span class="line"> alarm(benchtime);</span><br><span class="line"></span><br><span class="line"> rlen=<span class="built_in">strlen</span>(req);</span><br><span class="line"> nexttry:<span class="keyword">while</span>(<span class="number">1</span>)</span><br><span class="line"> &#123;</span><br><span class="line">    <span class="keyword">if</span>(timerexpired)</span><br><span class="line">    &#123;</span><br><span class="line">       <span class="keyword">if</span>(failed&gt;<span class="number">0</span>)</span><br><span class="line">       &#123;</span><br><span class="line">          <span class="comment">/* fprintf(stderr,&quot;Correcting failed by signal\n&quot;); */</span></span><br><span class="line">          failed--;</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    s=Socket(host,port);                          </span><br><span class="line">    <span class="keyword">if</span>(s&lt;<span class="number">0</span>) &#123; failed++;<span class="keyword">continue</span>;&#125; </span><br><span class="line">    <span class="keyword">if</span>(rlen!=write(s,req,rlen)) &#123;failed++;close(s);<span class="keyword">continue</span>;&#125;</span><br><span class="line">    <span class="keyword">if</span>(http10==<span class="number">0</span>) </span><br><span class="line">	    <span class="keyword">if</span>(shutdown(s,<span class="number">1</span>)) &#123; failed++;close(s);<span class="keyword">continue</span>;&#125;</span><br><span class="line">    <span class="keyword">if</span>(force==<span class="number">0</span>) </span><br><span class="line">    &#123;</span><br><span class="line">            <span class="comment">/* read all available data from socket */</span></span><br><span class="line">	    <span class="keyword">while</span>(<span class="number">1</span>)</span><br><span class="line">	    &#123;</span><br><span class="line">              <span class="keyword">if</span>(timerexpired) <span class="keyword">break</span>; </span><br><span class="line">	      i=read(s,buf,<span class="number">1500</span>);</span><br><span class="line">              <span class="comment">/* fprintf(stderr,&quot;%d\n&quot;,i); */</span></span><br><span class="line">	      <span class="keyword">if</span>(i&lt;<span class="number">0</span>) </span><br><span class="line">              &#123; </span><br><span class="line">                 failed++;</span><br><span class="line">                 close(s);</span><br><span class="line">                 <span class="keyword">goto</span> nexttry;</span><br><span class="line">              &#125;</span><br><span class="line">	       <span class="keyword">else</span></span><br><span class="line">		       <span class="keyword">if</span>(i==<span class="number">0</span>) <span class="keyword">break</span>;</span><br><span class="line">		       <span class="keyword">else</span></span><br><span class="line">			       bytes+=i;</span><br><span class="line">	    &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span>(close(s)) &#123;failed++;<span class="keyword">continue</span>;&#125;</span><br><span class="line">    speed++;</span><br><span class="line"> &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="socket-c"><a href="#socket-c" class="headerlink" title="socket.c"></a>socket.c</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* $Id: socket.c 1.1 1995/01/01 07:11:14 cthuang Exp $</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * This module has been modified by Radim Kolar for OS/2 emx</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/***********************************************************************</span></span><br><span class="line"><span class="comment">  module:       socket.c</span></span><br><span class="line"><span class="comment">  program:      popclient</span></span><br><span class="line"><span class="comment">  SCCS ID:      @(#)socket.c    1.5  4/1/94</span></span><br><span class="line"><span class="comment">  programmer:   Virginia Tech Computing Center</span></span><br><span class="line"><span class="comment">  compiler:     DEC RISC C compiler (Ultrix 4.1)</span></span><br><span class="line"><span class="comment">  environment:  DEC Ultrix 4.3 </span></span><br><span class="line"><span class="comment">  description:  UNIX sockets code.</span></span><br><span class="line"><span class="comment"> ***********************************************************************/</span></span><br><span class="line"> </span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/socket.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;netinet/in.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;arpa/inet.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;netdb.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/time.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdarg.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">Socket</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *host, <span class="keyword">int</span> clientPort)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> sock;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> inaddr;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">sockaddr_in</span> <span class="title">ad</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">hostent</span> *<span class="title">hp</span>;</span></span><br><span class="line">    </span><br><span class="line">    <span class="built_in">memset</span>(&amp;ad, <span class="number">0</span>, <span class="keyword">sizeof</span>(ad));</span><br><span class="line">    ad.sin_family = AF_INET;</span><br><span class="line"></span><br><span class="line">    inaddr = inet_addr(host);</span><br><span class="line">    <span class="keyword">if</span> (inaddr != INADDR_NONE)</span><br><span class="line">        <span class="built_in">memcpy</span>(&amp;ad.sin_addr, &amp;inaddr, <span class="keyword">sizeof</span>(inaddr));</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">        hp = gethostbyname(host);</span><br><span class="line">        <span class="keyword">if</span> (hp == <span class="literal">NULL</span>)</span><br><span class="line">            <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">        <span class="built_in">memcpy</span>(&amp;ad.sin_addr, hp-&gt;h_addr, hp-&gt;h_length);</span><br><span class="line">    &#125;</span><br><span class="line">    ad.sin_port = htons(clientPort);</span><br><span class="line">    </span><br><span class="line">    sock = socket(AF_INET, SOCK_STREAM, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">if</span> (sock &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> sock;</span><br><span class="line">    <span class="keyword">if</span> (connect(sock, (struct sockaddr *)&amp;ad, <span class="keyword">sizeof</span>(ad)) &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    <span class="keyword">return</span> sock;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="ending"><a href="#ending" class="headerlink" title="ending"></a>ending</h2><p><img src="https://i.loli.net/2020/03/31/b89ZDVyHdtYLIRX.jpg" alt="63773649_p0_master1200.jpg"></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2020-03-24-webbench/" title="webbench">https://riverferry.site/2020-03-24-webbench/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/tool/" rel="tag"><i class="fa fa-tags"></i> tool</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020-03-24-%E5%AD%97%E8%8A%82%E5%AF%B9%E9%BD%90/" rel="prev" title="字节对齐">
+      <i class="fa fa-chevron-left"></i> 字节对齐
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020-03-24-linux-waitqueue/" rel="next" title="linux-waitqueue">
+      linux-waitqueue <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">参考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8B%E7%BB%8D"><span class="nav-number">2.</span> <span class="nav-text">介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">基本原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E"><span class="nav-number">4.</span> <span class="nav-text">参数说明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BA%90%E7%A0%81"><span class="nav-number">5.</span> <span class="nav-text">源码</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#webbench-c"><span class="nav-number">5.1.</span> <span class="nav-text">webbench.c</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#socket-c"><span class="nav-number">5.2.</span> <span class="nav-text">socket.c</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ending"><span class="nav-number">6.</span> <span class="nav-text">ending</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : '3a57d041286c16306899617b958b0fa7',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

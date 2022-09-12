@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="分析stl sort函数的时候，发现优先级队列挺麻烦的，单独整理一篇">
+<meta property="og:type" content="article">
+<meta property="og:title" content="stl priority_queue源码分析">
+<meta property="og:url" content="https://riverferry.site/2021-05-24-stl%20priority_queue%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="分析stl sort函数的时候，发现优先级队列挺麻烦的，单独整理一篇">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_push_heap.gif">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_pop_heap.gif">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_heap_3_new.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_heap_4_new.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_6.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_head_6.gif">
+<meta property="article:published_time" content="2021-09-24T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.293Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="c++">
+<meta property="article:tag" content="stl">
+<meta property="article:tag" content="算法">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_push_heap.gif">
+
+<link rel="canonical" href="https://riverferry.site/2021-05-24-stl%20priority_queue%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>stl priority_queue源码分析 | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2021-05-24-stl%20priority_queue%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          stl priority_queue源码分析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-09-24 00:00:00" itemprop="dateCreated datePublished" datetime="2021-09-24T00:00:00+00:00">2021-09-24</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>5.9k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>5 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div class="note default">
+            <p>分析stl sort函数的时候，发现优先级队列挺麻烦的，单独整理一篇</p>
+          </div>
+
+<a id="more"></a>
+
+<h2 id="priority-queue"><a href="#priority-queue" class="headerlink" title="priority_queue"></a>priority_queue</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> __STL_LIMITED_DEFAULT_TEMPLATES</span></span><br><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">Tp</span>, <span class="keyword">class</span> _<span class="title">Sequence</span> =</span> vector&lt;_Tp&gt;, </span><br><span class="line">          <span class="class"><span class="keyword">class</span> _<span class="title">Compare</span> =</span> less&lt;<span class="keyword">typename</span> _Sequence::value_type&gt; &gt;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">Tp</span>, <span class="keyword">class</span> _<span class="title">Sequence</span>, <span class="keyword">class</span> _<span class="title">Compare</span>&gt;</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+<p>看看常用的几个函数的实现：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">const_reference <span class="title">top</span><span class="params">()</span> <span class="keyword">const</span> </span>&#123; <span class="keyword">return</span> c.<span class="built_in">front</span>(); &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">push</span><span class="params">(<span class="keyword">const</span> value_type&amp; __x)</span> </span>&#123;</span><br><span class="line">    __STL_TRY &#123;</span><br><span class="line">      c.<span class="built_in">push_back</span>(__x); </span><br><span class="line">      <span class="built_in">push_heap</span>(c.<span class="built_in">begin</span>(), c.<span class="built_in">end</span>(), comp);</span><br><span class="line">    &#125;</span><br><span class="line">    __STL_UNWIND(c.<span class="built_in">clear</span>());</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">pop</span><span class="params">()</span> </span>&#123;</span><br><span class="line">__STL_TRY &#123;</span><br><span class="line">    <span class="built_in">pop_heap</span>(c.<span class="built_in">begin</span>(), c.<span class="built_in">end</span>(), comp);</span><br><span class="line">    c.<span class="built_in">pop_back</span>();</span><br><span class="line">&#125;</span><br><span class="line">__STL_UNWIND(c.<span class="built_in">clear</span>());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>// 不带自定义排序的版本，默认是个最大堆</p>
+<h3 id="push-heap"><a href="#push-heap" class="headerlink" title="push_heap"></a>push_heap</h3><p>这里添加新元素的方法是：从下往上堆化</p>
+<ul>
+<li>先往完全二叉树的最后一个节点即随机迭代器的end()插入一个新元素，位置记为hole_index</li>
+<li>然后逐层往上和父节点比较，如果不满足最大堆的性质就覆盖父节点(这里没有直接swap)，直到top_index也就是堆顶结束</li>
+</ul>
+<p>这里传入了value是个值对象，在priority_queue::push_back(tmp)中value就是tmp,是vector的最后一个元素,在priority_queue::pop()中，value是数组原来最后的那个元素，但进到这个函数的时候最后一个元素已经被front()覆盖了，此时比堆化的是一个小数组。如下演示:</p>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_push_heap.gif"></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Heap-manipulation functions: push_heap, pop_heap, make_heap, sort_heap.</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">RandomAccessIterator</span>, <span class="keyword">class</span> _<span class="title">Distance</span>, <span class="keyword">class</span> _<span class="title">Tp</span>&gt;</span></span><br><span class="line"><span class="keyword">void</span> </span><br><span class="line">__push_heap(_RandomAccessIterator __first,</span><br><span class="line">            _Distance __holeIndex, _Distance __topIndex, _Tp __value)</span><br><span class="line">&#123;</span><br><span class="line">  _Distance __parent = (__holeIndex - <span class="number">1</span>) / <span class="number">2</span>;</span><br><span class="line">  <span class="keyword">while</span> (__holeIndex &gt; __topIndex &amp;&amp; *(__first + __parent) &lt; __value) &#123;</span><br><span class="line">    *(__first + __holeIndex) = *(__first + __parent);</span><br><span class="line">    __holeIndex = __parent;</span><br><span class="line">    __parent = (__holeIndex - <span class="number">1</span>) / <span class="number">2</span>;</span><br><span class="line">  &#125;    </span><br><span class="line">  *(__first + __holeIndex) = __value;   <span class="comment">// 这一步很重要，因为value不一定就是back()的元素</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">RandomAccessIterator</span>, <span class="keyword">class</span> _<span class="title">Distance</span>, <span class="keyword">class</span> _<span class="title">Tp</span>&gt;</span></span><br><span class="line"><span class="keyword">inline</span> <span class="keyword">void</span> </span><br><span class="line">__push_heap_aux(_RandomAccessIterator __first,</span><br><span class="line">                _RandomAccessIterator __last, _Distance*, _Tp*)</span><br><span class="line">&#123;</span><br><span class="line">  __push_heap(__first, _Distance((__last - __first) - <span class="number">1</span>), _Distance(<span class="number">0</span>), </span><br><span class="line">              _Tp(*(__last - <span class="number">1</span>)));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">RandomAccessIterator</span>&gt;</span></span><br><span class="line"><span class="keyword">inline</span> <span class="keyword">void</span> </span><br><span class="line"><span class="built_in">push_heap</span>(_RandomAccessIterator __first, _RandomAccessIterator __last)</span><br><span class="line">&#123;</span><br><span class="line">  __push_heap_aux(__first, __last,</span><br><span class="line">                  __DISTANCE_TYPE(__first), __VALUE_TYPE(__first));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="pop-heap"><a href="#pop-heap" class="headerlink" title="pop_heap"></a>pop_heap</h3><p>移除堆顶元素,这里比较复杂，一般介绍的删除堆顶的方法是:</p>
+<ul>
+<li>把最后一个元素的值拷贝到堆顶</li>
+<li>然后删除最后一个元素</li>
+<li>在接着从堆顶<strong>往下堆化</strong>更新</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_pop_heap.gif"></p>
+<p>但这里却不是这么实现的，简单概括下就是(按照默认的最大堆看)：</p>
+<ul>
+<li>把堆顶的元素的值拷贝到最后一个元素</li>
+<li>然后往下查找左右节点，把最大值(更新hole_index为当前的最大值的索引)拷贝到父节点(只比较左右节点，不和父节点比较)</li>
+<li>如果一直找直到找到了最后一个节点，则把倒数第二个节点(hole_index)拷贝到父节点 </li>
+<li>push_heap插入原来被覆盖掉的尾节点back()的值，范围是从first到前面最后那个hole_index</li>
+</ul>
+<p>分析：因为第一步用front()覆盖了back(),导致有2个重复的值，并且少了一个value(即原来的back()).后面一直按照com的规则，用最大值覆盖父节点，往下层走，保证上层都是符合堆化规则的。一直找到最后一层的最大值，这个最大值已经被copy然后赋值到上一层了，所以是重复存在的值，这时候相当于用value替换了这个重复的值，然后还是<strong>往上堆化</strong>.</p>
+<p>画了个示意图：</p>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_heap_3_new.png"></p>
+<p>if (__secondChild == __len)这种情况需要特别处理:</p>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_heap_4_new.png"></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">RandomAccessIterator</span>, <span class="keyword">class</span> _<span class="title">Distance</span>, <span class="keyword">class</span> _<span class="title">Tp</span>&gt;</span></span><br><span class="line"><span class="keyword">void</span> </span><br><span class="line">__adjust_heap(_RandomAccessIterator __first, _Distance __holeIndex,</span><br><span class="line">              _Distance __len, _Tp __value)</span><br><span class="line">&#123;</span><br><span class="line">  _Distance __topIndex = __holeIndex;</span><br><span class="line">  _Distance __secondChild = <span class="number">2</span> * __holeIndex + <span class="number">2</span>;</span><br><span class="line">  <span class="keyword">while</span> (__secondChild &lt; __len) &#123;</span><br><span class="line">    <span class="keyword">if</span> (*(__first + __secondChild) &lt; *(__first + (__secondChild - <span class="number">1</span>)))  <span class="comment">// __secondChild = 孩子节点的较大值</span></span><br><span class="line">      __secondChild--;</span><br><span class="line"></span><br><span class="line">    *(__first + __holeIndex) = *(__first + __secondChild);  <span class="comment">// __secondChild的值赋值给父节点__holeIndex</span></span><br><span class="line">    __holeIndex = __secondChild;</span><br><span class="line">    __secondChild = <span class="number">2</span> * (__secondChild + <span class="number">1</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (__secondChild == __len) &#123;     <span class="comment">// 碰到了最后的元素，也就是原来的堆顶元素</span></span><br><span class="line">    *(__first + __holeIndex) = *(__first + (__secondChild - <span class="number">1</span>));</span><br><span class="line">    __holeIndex = __secondChild - <span class="number">1</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  __push_heap(__first, __holeIndex, __topIndex, __value);   <span class="comment">// push原来的最后那个元素</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">RandomAccessIterator</span>, <span class="keyword">class</span> _<span class="title">Tp</span>, <span class="keyword">class</span> _<span class="title">Distance</span>&gt;</span></span><br><span class="line"><span class="keyword">inline</span> <span class="keyword">void</span> </span><br><span class="line">__pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last,</span><br><span class="line">           _RandomAccessIterator __result, _Tp __value, _Distance*)</span><br><span class="line">&#123;</span><br><span class="line">  *__result = *__first;     <span class="comment">// 用堆顶元素覆盖最后一个元素</span></span><br><span class="line">  __adjust_heap(__first, _Distance(<span class="number">0</span>), _Distance(__last - __first), __value);   <span class="comment">// 传入原来最后的元素</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">RandomAccessIterator</span>, <span class="keyword">class</span> _<span class="title">Tp</span>&gt;</span></span><br><span class="line"><span class="keyword">inline</span> <span class="keyword">void</span> </span><br><span class="line">__pop_heap_aux(_RandomAccessIterator __first, _RandomAccessIterator __last,</span><br><span class="line">               _Tp*)</span><br><span class="line">&#123;</span><br><span class="line">  __pop_heap(__first, __last - <span class="number">1</span>, __last - <span class="number">1</span>, </span><br><span class="line">             _Tp(*(__last - <span class="number">1</span>)), __DISTANCE_TYPE(__first));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">RandomAccessIterator</span>&gt;</span></span><br><span class="line"><span class="function"><span class="keyword">inline</span> <span class="keyword">void</span> <span class="title">pop_heap</span><span class="params">(_RandomAccessIterator __first, </span></span></span><br><span class="line"><span class="function"><span class="params">                     _RandomAccessIterator __last)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  __pop_heap_aux(__first, __last, __VALUE_TYPE(__first));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="make-heap"><a href="#make-heap" class="headerlink" title="make_heap"></a>make_heap</h3><p>建堆，步骤：</p>
+<ul>
+<li>从最后的一个非叶子节点(parent)开始往下堆化，每次用孩子节点的较大值覆盖父节点的值，一层一层往下执行<ul>
+<li>记录当前parent = old_parent</li>
+<li>走到最后的位置是hole_index</li>
+<li>hole_index和它的now_parent是相同的值</li>
+<li>push_heap原来的old_parent值到random_iter[old_parent : hole_index]</li>
+</ul>
+</li>
+<li>退一步(old_parent-1)，由底层到top,逐层一个一个执行上一步的步骤</li>
+<li>执行到top停止</li>
+</ul>
+<p>代码逻辑示例图：</p>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_6.png"></p>
+<p>直接swap交换的话逻辑会简单很多:</p>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/20210925_head_6.gif"></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">RandomAccessIterator</span>, <span class="keyword">class</span> _<span class="title">Distance</span>, <span class="keyword">class</span> _<span class="title">Tp</span>&gt;</span></span><br><span class="line"><span class="keyword">void</span> </span><br><span class="line">__adjust_heap(_RandomAccessIterator __first, _Distance __holeIndex,</span><br><span class="line">              _Distance __len, _Tp __value)</span><br><span class="line">&#123;</span><br><span class="line">  _Distance __topIndex = __holeIndex;</span><br><span class="line">  _Distance __secondChild = <span class="number">2</span> * __holeIndex + <span class="number">2</span>;</span><br><span class="line">  <span class="keyword">while</span> (__secondChild &lt; __len) &#123;</span><br><span class="line">    <span class="keyword">if</span> (*(__first + __secondChild) &lt; *(__first + (__secondChild - <span class="number">1</span>)))  <span class="comment">// __secondChild = 孩子节点的较大值</span></span><br><span class="line">      __secondChild--;</span><br><span class="line"></span><br><span class="line">    *(__first + __holeIndex) = *(__first + __secondChild);  <span class="comment">// __secondChild的值赋值给父节点__holeIndex</span></span><br><span class="line">    __holeIndex = __secondChild;</span><br><span class="line">    __secondChild = <span class="number">2</span> * (__secondChild + <span class="number">1</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (__secondChild == __len) &#123;     <span class="comment">// 碰到了最后的元素，也就是原来的堆顶元素</span></span><br><span class="line">    *(__first + __holeIndex) = *(__first + (__secondChild - <span class="number">1</span>));</span><br><span class="line">    __holeIndex = __secondChild - <span class="number">1</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  __push_heap(__first, __holeIndex, __topIndex, __value);   <span class="comment">// push原来的最后那个元素</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">RandomAccessIterator</span>, <span class="keyword">class</span> _<span class="title">Tp</span>, <span class="keyword">class</span> _<span class="title">Distance</span>&gt;</span></span><br><span class="line"><span class="keyword">void</span> </span><br><span class="line">__make_heap(_RandomAccessIterator __first,</span><br><span class="line">            _RandomAccessIterator __last, _Tp*, _Distance*)</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">if</span> (__last - __first &lt; <span class="number">2</span>) <span class="keyword">return</span>; <span class="comment">// 只有一个元素</span></span><br><span class="line">  _Distance __len = __last - __first; <span class="comment">// 元素个数</span></span><br><span class="line">  _Distance __parent = (__len - <span class="number">2</span>)/<span class="number">2</span>; <span class="comment">// 最后一个节点的父节点的距离</span></span><br><span class="line">    </span><br><span class="line">  <span class="keyword">while</span> (<span class="literal">true</span>) &#123;</span><br><span class="line">    __adjust_heap(__first, __parent, __len, _Tp(*(__first + __parent)));</span><br><span class="line">    <span class="keyword">if</span> (__parent == <span class="number">0</span>) <span class="keyword">return</span>;</span><br><span class="line">    __parent--;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">template</span> &lt;<span class="class"><span class="keyword">class</span> _<span class="title">RandomAccessIterator</span>&gt;</span></span><br><span class="line"><span class="keyword">inline</span> <span class="keyword">void</span> </span><br><span class="line"><span class="built_in">make_heap</span>(_RandomAccessIterator __first, _RandomAccessIterator __last)</span><br><span class="line">&#123;</span><br><span class="line">  __make_heap(__first, __last,</span><br><span class="line">              __VALUE_TYPE(__first), __DISTANCE_TYPE(__first));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="time-complexity"><a href="#time-complexity" class="headerlink" title="time complexity"></a>time complexity</h2><p>时间复杂度</p>
+<table>
+<thead>
+<tr>
+<th>建堆</th>
+<th>插入</th>
+<th>删除</th>
+<th>排序</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>O(n)</td>
+<td>O(logn)</td>
+<td>O(logn)</td>
+<td>O(nlogn)</td>
+</tr>
+</tbody></table>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ul>
+<li>原地排序算法依赖于有序容器，快排也是原地排序(有序容器)</li>
+<li>不稳定的排序，和快排一样</li>
+<li>不是顺序访问，对cpu缓存不友好，这一点不如quicksort</li>
+<li>数据交换次数多于快排</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2021-05-24-stl%20priority_queue%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" title="stl priority_queue源码分析">https://riverferry.site/2021-05-24-stl priority_queue源码分析/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/c/" rel="tag"><i class="fa fa-tags"></i> c++</a>
+              <a href="/tags/stl/" rel="tag"><i class="fa fa-tags"></i> stl</a>
+              <a href="/tags/%E7%AE%97%E6%B3%95/" rel="tag"><i class="fa fa-tags"></i> 算法</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021-09-04-mapreduce/" rel="prev" title="mapreduce">
+      <i class="fa fa-chevron-left"></i> mapreduce
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021-10-06-centos8%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%8F%8C%E7%BD%91%E5%8D%A1+docker%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0%E7%8E%AF%E5%A2%83/" rel="next" title="centos8虚拟机双网卡+docker配置本地环境">
+      centos8虚拟机双网卡+docker配置本地环境 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#priority-queue"><span class="nav-number">1.</span> <span class="nav-text">priority_queue</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#push-heap"><span class="nav-number">1.1.</span> <span class="nav-text">push_heap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#pop-heap"><span class="nav-number">1.2.</span> <span class="nav-text">pop_heap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#make-heap"><span class="nav-number">1.3.</span> <span class="nav-text">make_heap</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#time-complexity"><span class="nav-number">2.</span> <span class="nav-text">time complexity</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : 'd311d349047a6d9a1f06db8a59314405',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

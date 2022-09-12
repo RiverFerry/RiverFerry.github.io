@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="又挖了个坑，还是个大坑，不知道两天能挖完不。愚公竟是我自己？">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译文]The Design of a Practical System for Fault-Tolerant VirtualMachines">
+<meta property="og:url" content="https://riverferry.site/2021-02-12-The-Design-of-a-Practical-System-for-Fault-Tolerant-Virtual-Machines/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="又挖了个坑，还是个大坑，不知道两天能挖完不。愚公竟是我自己？">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-19-06_water.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-19-23_water.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-19-37_water.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-19-51_water.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-20-03_water.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-20-15_water.jpg">
+<meta property="article:published_time" content="2021-02-12T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.291Z">
+<meta property="article:author" content="TheRiver">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-19-06_water.jpg">
+
+<link rel="canonical" href="https://riverferry.site/2021-02-12-The-Design-of-a-Practical-System-for-Fault-Tolerant-Virtual-Machines/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>[译文]The Design of a Practical System for Fault-Tolerant VirtualMachines | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2021-02-12-The-Design-of-a-Practical-System-for-Fault-Tolerant-Virtual-Machines/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          [译文]The Design of a Practical System for Fault-Tolerant VirtualMachines
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-02-12 00:00:00" itemprop="dateCreated datePublished" datetime="2021-02-12T00:00:00+00:00">2021-02-12</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>69k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>1:03</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div class="note info">
+            <p>又挖了个坑，还是个大坑，不知道两天能挖完不。愚公竟是我自己？</p>
+          </div>
+
+<a id="more"></a>
+
+<h2 id="Abstract"><a href="#Abstract" class="headerlink" title="Abstract"></a>Abstract</h2><p>We have implemented a <code>commercial</code> <code>enterprise-grade</code> system for providing fault-tolerant virtual machines, based on the approach of replicating the execution of a primary virtual machine (VM) <code>via</code> a backup virtual machine on another server. We have designed a complete system in VMware vSphere 4.0 that is easy to use, runs on commodity servers, and typically reduces performance of real applications by less than 10%. Our method for replicating VM execution is similar to that described in Bressoud [3], but we have made a number of significant design changes that greatly improve performance. In addition, an easy-to-use, commercial system that automatically restores <code>redundancy</code> after failure requires many additional components beyond replicated VM execution. We have designed and implemented these extra components and addressed many practical issues <code>encountered</code> in supporting VMs running enterprise applications. In this paper, we describe our basic design, discuss <code>alternate</code> design choices and a number of the implementation details, and provide an <code>evaluation</code> of our performance for both micro-benchmarks and real applications.</p>
+<div class="note info">
+            <p>我们已经实现了一个支持容错虚拟机的商用企业级系统，基于通过在另一个服务器上的备份虚拟机复制执行主虚拟机的方法。我们已经在VMware vSphere 4.0上实现了一个易于使用的完整的系统，这个系统运行在商用服务器上，并且通常会降低实际应用的性能少于10%.我们复制VM执行的方法和Bressoud描述的是相似的，但是我们做了很多重要的设计选择来极大的提高了性能。另外，一个在故障后能自动恢复冗余的易于使用的商用系统需要许多在复制的虚拟机上的额外组件。我们已经设计并实现了这些额外的组件，并且也遇到了一些实际的问题在支持虚拟机运行企业应用的时候。在这篇文章，我们会描述我们的基础设计，并讨论替代的选择和许多实现的细节，也提供了在micro-benchmarks和实际应用上的性能评估。</p>
+          </div>
+
+<p><strong>Key Words and Phrases:</strong> virtual machines, fault tolerance, deterministic replay</p>
+<div class="note info">
+            <p>关键词和短语：虚拟机，容错，确定性重放</p>
+          </div>
+
+<hr>
+<h2 id="1-Introduction"><a href="#1-Introduction" class="headerlink" title="1 Introduction"></a>1 Introduction</h2><p>A common approach to implementing fault-tolerant servers is the primary/backup approach [1], where the execution of a primary server is replicated by a backup server. Given that the primary and backup servers execute <code>identically</code>, the backup server can <code>take over</code> serving client requests without any interruption or loss of state if the primary server fails. One method for replicating servers is sometimes <code>referred to</code> as the state-machine approach [13]. The idea is to <code>model</code> the servers as deterministic state machines that are kept in sync by starting them from the same initial state and ensuring that they receive the same input requests in the same order. Since most servers or services have some operations that are not deterministic, extra <code>coordination</code> must be used to ensure that a primary and backup are kept in sync.</p>
+<div class="note info">
+            <p>一个常用的实现容错服务的方法是主/备份，即主服务上的运行在备份服务上复制运行。如果主服务故障了，备份服务能够接管客户端的请求，而没有任何中断或状态的丢失。复制服务的方法也称为状态机方法。思想是将服务器建模为确定性状态机，通过按照相同初始化状态启动和以相同的顺序接受相同的输入请求来保持同步。因为大多数的服务器或者服务都有一些不确定性的操作，必须通过额外的协作来保证主备之间的同步。</p>
+          </div>
+
+<p>Implementing coordination to ensure deterministic execution of physical servers [14] is difficult, particularly as <code>processor</code> frequencies increase and clock synchronization becomes more difficult. <code>In contrast</code>, a virtual machine (VM) running on top of a hypervisor is an <code>excellent</code> platform for implementing the primary/backup approach. A VM can be considered a well-defined state machine whose operations are the operations of the machine being virtualized (including all its devices). <code>As with</code> physical servers, VMs have some non-deterministic operations (e.g. reading a time-of-day clock or <code>delivery</code> of an interrupt), and so extra information must be sent to the backup to ensure that it is kept in sync. Since the hypervisor has full control over the execution of a VM, including delivery of all inputs, the <code>hypervisor</code> is able to <code>capture</code> all the necessary information about non-deterministic operations on the primary VM and to replay these operations correctly on the backup VM.</p>
+<div class="note info">
+            <p>实现协作来保证物理服务器的完全确定性执行是困难的，特别是随着处理器频率增加和时钟同步变的困难。作为对比，运行在虚拟机监视器顶层的虚拟机是实现主/备份方法的极好的平台。VM可以被认为是良好定义的状态机，其操作是虚拟化(包括所有设备)的机器的操作。和物理服务器一样，VM也有一些不确定的操作(例如读取一个时钟时间或者中断传递),并且这些额外信息必须发送给备份机来保证主从同步。因为虚拟机监视器对于虚拟机执行有完全的控制权，包括输入数据的传递，所以虚拟机监视器能够捕获所有主虚拟机上涉及的非确定性操作的有效信息，然后在备份虚拟机上正确的重放这些操作。</p>
+          </div>
+
+<p>A system of replication based on virtual machines can replicate individual VMs, allowing some VMs to be replicated and fault-tolerant, while other VMs are not replicated. In addition, technology based on VMs does not require hardware modifications, allowing the system to <code>ride</code> the hardware performance improvement <code>curve</code> of newer <code>microprocessors</code>. A system based on replicated execution of physical servers requires hardware modifications and thus often <code>lags behind</code> the performance curve. Yet another advantage of virtual machines for this application is the possibility of physical separation of the primary and the backup:<br>for example, the replicated virtual machines can be run on physical machines distributed across a <code>campus</code>, which provides more reliability than a primary/backup system running in the same building.</p>
+<div class="note info">
+            <p>基于虚拟机的备份系统可以备份单个VM,这允许在一些Vm不被备份的时候，还有部分Vm会被备份和容错。另外，基于的Vm的即使不需要修改硬件，这让系统能够驾驭新的微处理器来改进硬件性能。运行在物理服务器上的备份系统需要修改硬件，因此经常滞后于性能曲线。虚拟机对于应用的另一个优点是能够物理分离主机和备机：比如，备份的虚拟机可以运行在园区内分离的物理机上，这提供了比运行在同一建筑下的主备机更好的可靠性。</p>
+          </div>
+
+<p>We have implemented fault-tolerant VMs using the primary/backup approach on the VMware vSphere 4.0 platform, which runs fully virtualized x86 virtual machines in a highly efficient <code>manner</code>. Since VMware vSphere implements a complete x86 virtual machine that can run all operating systems and applications that run on an x86 platform, we are automatically able to provide fault tolerance for any x86 operating systems and applications. The base technology that allows us to record the execution of a primary and ensure that the backup executes identically <code>is known as</code> deterministic replay [15]. VMware vSphere Fault Tolerance (FT) is based on deterministic replay, but adds in the necessary extra protocols and functionality to build a complete fault-tolerant system. In addition to providing hardware fault tolerance, our system restores redundancy by automatically starting a new backup virtual machine on any available server in the local cluster. At this time, the production versions of both deterministic replay and VMware FT support only <code>uni-processor</code> VMs. Recording and replaying the execution of a multi-processor VM is still <code>work in progress</code>, with significant performance issues because <code>nearly</code> every access to shared memory can be a non-deterministic operation.</p>
+<div class="note info">
+            <p>我们已经在VMware vSphere4.0平台上使用主/备份的方法实现了容错虚拟机，可以高效运行在完全虚拟化的x86平台的虚拟机上。因为Vmware vSphere实现了可以运行所有基于X86平台的操作系统和应用的x86虚拟机，所以我们能够提供对于所有x86的操作系统，应用的容错能力。基础的技术让我们能够记录主机的执行并确保备机相同的执行，这称之为确定性重放。Vmware vSphere的容错是基于确定性重放的，但是为了建立一个完整的容错系统增加了必要的额外的协议和功能。另外为了提供硬件容错，我们的系统能够通过在本地集群的任何可用服务器上开启一个新的虚拟机来自动的回复冗余。现在，确定性重放和VMware FT的版本仅支持单处理器的虚拟机。记录并重放多处理器的虚拟机的执行仍在开发中，一个很重要的性能问题是几乎每一个对于共享内存的访问都会是一个不确定性的操作。</p>
+          </div>
+
+<p>Bressoud [3] describes a <code>prototype</code> implementation of fault-tolerant VMs for the HP PARISC platform. Our approach is similar, but we have made some <code>fundamental</code> changes for performance reasons and <code>investigated</code> a number of design <code>alternatives</code>. In addition, we have had to design and implement many additional components in the system and deal with a number of practical issues to build a complete system that is efficient and <code>usable</code> by <code>customers</code> running enterprise applications. Similar to most other practical systems discussed, we only attempt to deal with fail-stop failures [12], which are server failures that can be detected before the failing server causes an incorrect <code>externally</code> <code>visible</code> action.</p>
+<div class="note info">
+            <p>Bressoud描述了对于HP PARISC平台的容错虚拟机的原型实现。这和我们的方法是相似的，但出于性能原因我们做出了一些根本改变并调查了一系列的可替代方案。另外，为了建立一个能够由顾客运行在企业应用上的高效可以用的完整系统，我们设计并实现了许多额外的系统组件，并且处理了一系列的实际问题。和讨论的大多数其他的实际系统相似，我们只尝试解决fail-stop故障，fail-stop故障是服务器故障可以在故障的服务器引起不正确的外部不可见行为之前被检测到。</p>
+          </div>
+
+<p>The rest of the paper is organized as follows. First, we describe our basic design and detail our fundamental protocols that ensure that no data is lost if a backup VM takes over after a primary VM fails. Then, we describe in detail many of the practical issues that must be addressed to build a correct, <code>robust</code>, fully-functioning, and <code>automated</code> system. We also describe several design choices that <code>arise</code> for implementing fault-tolerant VMs and discuss the <code>tradeoffs</code> in these choices. Next, we give performance results for our implementation for some benchmarks and some real enterprise applications. Finally, we describe related work and conclude.</p>
+<div class="note info">
+            <p>这篇论文的其余部分安排如下。首先，我们描述了我们的基础设计并详细介绍我们的基础协议，基础协议确保主机故障后由备机接管的时候没有数据丢失。然后，我们详细描述为建立一个正确的，健壮的，完整功能的，自动的系统必然会遇到的问题。我们还会描述一些为实现容错虚拟机会遇到的一些设计选择，讨论对这些选择的权衡。接着，我们提供我们的实现在一些benchmarks和一些实际企业应用上的性能表现。最后，我们会介绍相关的工作和结论。</p>
+          </div>
+
+<hr>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-19-06_water.jpg"></p>
+<h2 id="2-Basic-FT-Design"><a href="#2-Basic-FT-Design" class="headerlink" title="2 Basic FT Design"></a>2 Basic FT Design</h2><p>Figure 1 shows the basic setup of our system for fault-tolerant VMs. For a given VM for which we <code>desire</code> to provide fault tolerance (the primary VM), we run a backup VM on a different physical server that is kept in sync and executes identically to the primary virtual machine, though with a small time lag. We say that the two VMs are in virtual <code>lockstep</code>. The virtual disks for the VMs are on shared storage (such a <code>Fibre</code> Channel or iSCSI <code>disk array</code>), and therefore accessible to the primary and backup VM for input and output. (We will discuss a design in which the primary and backup VM have separate non-shared virtual disks in Section 4.1.) Only the primary VM <code>advertises</code> its <code>presence</code> on the network, so all network inputs come to the primary VM. Similarly, all other inputs (such as keyboard and mouse) go only to the primary VM.</p>
+<div class="note info">
+            <p>图1展示了我们容错虚拟机系统的基础设置。给定一个我们想要用来提供容错的虚拟机(成为主机)，我们会在不同的物理服务器上运行一个备机，备机通过和主机一样的执行来保持同步，不过会有一点延迟。我们称主机和备机是帧同步的。虚拟机的虚拟磁盘在共享存储上(比如光纤通道或者iSCSI磁盘阵列)，因此主机和备机访问共享存储用于输入和输出。(我们将在4.1节讨论，主机和备机在不同的非共享的虚拟磁盘上的设计)。只有主机参与网络交互，所以所有通过网络的输入都发给了主机。类似的，所有其他的输入(比如键盘或者鼠标)也只发给了主机。</p>
+          </div>
+
+<p>All input that the primary VM receives is transmitted to the backup VM via a network connection known as the logging channel. For server workloads, the <code>dominant</code> input traffic is network and disk. Additional information, as discussed <code>below in</code> Section 2.1, is transmitted as necessary to ensure that the backup VM executed non-deterministic operations in the same way as the primary VM. The end result is that the backup VM always executes identically to the primary VM. However, the outputs of the backup VM are always <code>dropped</code> by the hypervisor, so only the primary produces actual outputs that are returned to clients. As described in Section 2.2, the primary and backup VM must follow a specific protocol, including explicit <code>acknowledgments</code> by the backup VM, in order to ensure that no data is lost if the primary fails.</p>
+<div class="note info">
+            <p>所有主机接收的输入会被传输给备机，通过称为日志通道的网络连接。对于服务器工作负载，主要的输入流量来自网络和磁盘。我们在2.1节的下面部分将要讨论的额外信息必要时也会被传输给备机，来确保备机以和主机相同的方式运行不确定性操作。所以最后备机总是和主机以相同的方式运行。然而，备机的输出总是会被虚拟机管理程序丢弃，所以只有主机会产生实际的返回给客户端的输出。如2.2节描述的，主机和备机必须遵从特定的协议，包括备机的显式确认，为了保证主机故障的时候没有数据丢失。</p>
+          </div>
+
+<p>A <code>crucial</code> issue that is not discussed much in previous work is the actual process of <code>determining</code> quickly whether a primary or backup VM has failed. Our system uses a <code>combination</code> of heartbeating between the <code>relevant</code> servers and monitoring of the traffic on the logging channel. In addition, we must ensure that only one of the primary or backup VM takes over execution, even if there is a split-brain situation where the primary and backup servers have lost communication with each other.</p>
+<div class="note info">
+            <p>一个前面没有过多讨论的关键问题是快速判断哪个主机，备机故障的处理过程。我们的系统使用相关服务器和日志通道上流量监控程序的心跳包的关联。另外，我们必须确保只有一个主机或备机接管执行，即使在主机和备机失联导致脑裂的情况。</p>
+          </div>
+
+<p>In the following sections, we provide more details on several important areas. In Section 2.1, we give some details on the deterministic replay technology that ensures that primary and backup VMs are kept in sync via the information sent over the logging channel. In Section 2.2, we describe a fundamental rule of our FT protocol that ensures that no data is lost if the primary fails. In Section 2.3, we describe our methods for detecting and responding to a failure in a correct <code>fashion</code>.</p>
+<div class="note info">
+            <p>在下面的章节中，我们提供对于几个重要领域更多的细节。在2.1节，我们描述对于确定性重放技术的更多细节，确定性重放即使保证主机和备机通过日志通道发送信息来保持同步。在2.2节，我们描述我们容错协议的基础规则，容错协议保证主机故障的时候没有数据丢失。在2.3节，我们描述我们以正确方式来检测和响应故障的方法。</p>
+          </div>
+
+<hr>
+<h3 id="2-1-Record-Replay-Implementation"><a href="#2-1-Record-Replay-Implementation" class="headerlink" title="2.1 Record-Replay Implementation"></a>2.1 Record-Replay Implementation</h3><p>As we have mentioned, replicating servers (or VMs) can be modeled as the replication of deterministic state machines. If two deterministic state machines are started in the same initial state and provided the exact same inputs in the same order, then they will go through the same sequences of states and produce the same outputs. In the simplest case, one state machine is the primary, and the other is the backup. If all the inputs go to the primary, then the inputs can be distributed to the backup from the primary via a logging channel. A useful physical computer, when considered as a state machine, has a broad set of inputs<br><code>ranging</code> from a keyboard device to network input received from a client. In addition, nondeterministic events like virtual interrupts, and non-deterministic operations like reading the clock cycle counter from the processor, affect the state machine. This presents three challenges to a practical hypervisor capable of running any operating system that can run on a physical machine: (1) correctly <code>capturing</code> all the input and non-determinism necessary to ensure deterministic execution of a backup virtual machine, (2) correctly applying the inputs and non-determinism to the backup virtual machine, and (3) doing so in a manner that doesn’t <code>degrade</code> performance.</p>
+<div class="note info">
+            <p>如前所述，备份服务器(或备份虚拟机)可以被建模为确定性状态机的备份。如果两个确定性状态机以相同的初始状态启动并提供相同次序的完全相同的输入，则它们将经过相同的状态顺序并产生相同的输出。在最简单的情况，一个状态机是主，另一个是备。如果所有的输入都到达主，则输出可通过日志通道从主分发给备机。一个有用的物理计算机，作为状态机的时候，有广泛的输入范围，从键盘设备到来自客户端的网络输入。另外，不确定的事件比如虚拟中断，和不确定性操作像是从处理器读取时钟周期计数器，会影响状态机。这给实际的虚拟机管理程序在物理机上运行任何操作系统的能力带来了3个挑战：<br>(1) 正确的捕获所有输入和必要的不确定性来保证备机的确定性执行<br>(2) 正确的应用输入和不确定性给备机<br>(3) 以不降低性能的方式进行</p>
+          </div>
+
+<p>VMware deterministic replay [15] provides exactly this functionality for x86 virtual machines on the VMware vSphere platform. Deterministic replay allows the inputs of a VM and all possible non-determinism <code>associated</code> with the VM execution to be recorded via a stream of log entries written to a log file. The VM execution may be replayed later exactly by reading the log entries from the file. Non-deterministic state <code>transitions</code> can either result from explicit operations executed by the VM that have non-deterministic results (such as reading the time-of-day clock), or <code>asynchronous</code> events (such as interrupts) which create non-determinism because the point at which they interrupt the <code>dynamic</code> instruction stream affects the virtual machine execution.</p>
+<div class="note info">
+            <p>Vmware确定性重放正是为VMware vSphere平台上的x86虚拟机提供了此功能。确定性重放允许虚拟的输入和所有与虚拟机执行相关联的可能的不确定性能够通过写到日志文件的日志项的流记录下来。通过读取日志文件的日志项，可以在稍后准确的回访虚拟机的执行。不确定性状态转换可能是由有不确定性结果(比如读取time-of-day的时钟)的虚拟机的显式操作导致，也可能由异步的事件(比如中断)导致。这两种会导致不确定状态是因为它们打断动态指令流的时候会影响虚拟机的执行。</p>
+          </div>
+
+<p>For non-deterministic operations, <code>sufficient</code> information must be logged to allow the operation to be <code>reproduced</code> with the same state change and output when replaying. For nondeterministic events such as timer interrupts or IO completion interrupts, the exact instruction at which the event occurred must also be recorded. During replay, the event must be delivered at the exact same point in the instruction stream. VMware deterministic replay implements an efficient event recording and event delivery mechanism that employs various <code>techniques</code>, including the use of hardware performance counters developed in <code>conjunction</code><br>with AMD [2] and Intel [8].</p>
+<div class="note info">
+            <p>对于不确定性操作，充足的信息必须被日记记录下来，来让重放的时候操作可以按照相同的状态改变和输出被重置。对于不确定性的事件比如时钟中断或者IO完成中断，还必须记录事件发生的确切指令。在重放期间，必须在指令流的同一时间点传递事件。VMware确定性重放实现了一个有效的事件记录和事件传递机制，该机制使用了多种技术，包括由amd和intel联合开发的硬件性能计数器。</p>
+          </div>
+
+<p>Bressoud [3] mentions dividing the execution of VM into <code>epochs</code>, where non-deterministic events such as interrupts are only delivered at the end of an epoch. The <code>notion</code> of epoch seems to be used as a batching mechanism because it is too expensive to deliver each interrupt separately at the exact instruction where it occurred. However, our event delivery mechanism is efficient enough that VMware deterministic replay has no need to use epochs. The occurrence of each interrupt is recorded and logged as it occurs and efficiently delivered at the <code>appropriate</code> instruction while being replayed.</p>
+<div class="note info">
+            <p>Bressoud提到了将虚拟机的执行分为epochs(阶段？时期？)，不确定性事件比如中断只在最后的epoch传递。epoch被用于批处理机制，因为在中断发生的时候分别传递每一个中断在对应的指令是代价很高的。然而，我们的事件传递机制是足够有效的，所以VMware确定性重放不需要使用epochs.每一个中断的发生都可以被记录并写到日志，并有效的传递给适当的指令，在重放的时候。</p>
+          </div>
+
+<hr>
+<h3 id="2-2-FT-Protocol"><a href="#2-2-FT-Protocol" class="headerlink" title="2.2 FT Protocol"></a>2.2 FT Protocol</h3><p>For VMware FT, we use deterministic replay to produce the necessary log entries to record the execution of the primary VM, but instead of writing the log entries to disk, we send them to the backup VM via the logging channel. The backup VM replays the entries in real time, and hence executes identically to the primary VM. However, we must <code>augment</code> the logging entries with a <code>strict</code> FT protocol on the logging channel in order to ensure that we achieve fault tolerance. Our fundamental requirement is the following:</p>
+<div class="note info">
+            <p>对于VMware容错，我们使用确定性重放来产生必要的日志项纪录主机的执行，但是不是将日志项写入磁盘，而是通过日志通道将日志项发送给备机。备机实时回放日志项，因此备机可以和主机有相同的执行。但是，为了容错，我们必须通过在日志通道上的严格的容错协议。基础协议有下面这些要求：</p>
+          </div>
+
+<blockquote>
+<p>Output Requirement: if the backup VM ever takes over after a failure of the primary, the backup VM will continue executing in a way that is entirely consistent with all outputs that the primary VM has sent to the external world.</p>
+</blockquote>
+<div class="note info">
+            <p>输出要求： 如果备机在主机故障后接管，备机将以和主机已经发送发送给外部世界输出完全一致性的继续运行。</p>
+          </div>
+
+<p>Note that after a <code>failover</code> occurs (i.e. the backup VM takes over after the failure of the primary VM), the backup VM will likely start executing quite differently from the way the primary VM would have continued executing, because of the many non-deterministic events happening during execution. However, as long as the backup VM <code>satisfies</code> the Output Requirement, no state or data is lost during a failover to the backup VM, and the clients will notice no interruption or inconsistency in their service.</p>
+<div class="note info">
+            <p>注意，在故障转移发生(备机在主机故障后接管)之后，备机可能以和主机继续执行的方式完全不同的方式启动执行，因为许多不确定性事件在执行期间发生。然而，只要备机满足输出要求，就不会有任何状态和数据在故障转移给备机的时候丢失，并且客户端不会看到服务端有中断和不一致性的现象。</p>
+          </div>
+
+<p>The Output Requirement can be ensured by delaying any external output (typically a network packet) until the backup VM has received all information that will allow it to replay execution at least to the point of that output operation. One necessary condition is that the backup VM must have received all log entries generated <code>prior</code> to the output operation. These log entries will allow it to execute up to the point of the last log entry. However, suppose a failure were to happen immediately after the primary executed the output operation. The backup VM must know that it must keep replaying up to the point of the output operation and only “go live” (stop replaying and take over as the primary VM, as described in Section 2.3) at that point. If the backup were to go live at the point of the last log entry before the output operation, some non-deterministic event (e.g. timer interrupt delivered to the VM) might change its execution path before it executed the output operation.</p>
+<div class="note info">
+            <p>输出要求可以通过延迟所有外部输出(通常是网络包)直到备机已经接受了所有信息(允许备机重放到至少输出操作的时刻)的时候。一个必要的条件是备机必须已经接收了所有的输出操作事先生成的日志项。这些日志项能够让备机执行到最后的日志项的时刻。然而，如果一个故障在主机执行输出操作的时候立刻发生。备机必须知道它必须一直重放到输出操作的时刻然后在那个时刻仅仅上线(停止重放并接管主机，像2.3节描述的那样)。如果备机在输出操作之前的最后的日志项的时刻上线，一些不确定性事件(比如传递给虚拟机的时钟中断)可能改变执行路径，在执行输出操作之前。</p>
+          </div>
+
+<p>Given the above <code>constraints</code>, the easiest way to <code>enforce</code> the Output Requirement is to create a special log entry at each output operation. Then, the Output Requirement may be enforced by this specific rule:</p>
+<div class="note info">
+            <p>鉴于上面的约束，执行输出要求的最简单方式是对每一个输出操作创建一个特殊的日志项。然后，输出要求可以通过这些特殊的规则被执行：</p>
+          </div>
+
+<blockquote>
+<p>Output Rule: the primary VM may not send an output to the external world, until the backup VM has received and acknowledged the log entry associated with the operation producing the output.</p>
+</blockquote>
+<div class="note info">
+            <p>输出规则：主机直到备机接收被确认了和产生输出相关联的日志项的时候，才发送输出给外部世界。</p>
+          </div>
+
+<p>If the backup VM has received all the log entries, including the log entry for the outputproducing operation, then the backup VM will be able to exactly reproduce the state of the primary VM at that output point, and so if the primary dies, the backup will correctly reach a state that is consistent with that output. <code>Conversely</code>, if the backup VM takes over without receiving all necessary log entries, then its state may quickly <code>diverge</code> such that it is inconsistent with the primary’s output. The Output Rule is in some ways <code>analogous</code> to the approach described in [11], where an “externally synchronous” IO can actually be buffered, as long as it is actually written to disk before the next external communication.</p>
+<div class="note info">
+            <p>如果备机已经接收了所有的日志项，包括输出产生操作的日志项，那么备机将能够准确的重现在该输出点上的主机的状态，即使主机宕了，备机仍能够正确的达到和该输出一致的状态。相反，如果备机在没有接收到所有必要的日志项的时候就接管了主机，则备机的状态可能很快偏离到和主机输出不一致的状态。输出规则在某些方面和[11]提到的方法是类似的，其中外部同步IO可以被缓冲，只要在下一次外部通信前写入磁盘。</p>
+          </div>
+
+<p>Note that the Output Rule does not say anything about stopping the execution of the primary VM. We need only delay the sending of the output, but the VM itself can continue execution. Since operating systems do non-blocking network and disk outputs with asynchronous interrupts to <code>indicate</code> completion, the VM can easily continue execution and will not necessarily be immediately affected by the delay in the output. In contrast, previous work [3, 9] has typically indicated that the primary VM must be completely stopped <code>prior to</code> doing an output until the backup VM has acknowledged all necessary information from the primary VM.</p>
+<div class="note info">
+            <p>注意输出规则没有说任何要通知主机执行的事情。我们只需要延迟发送输出，但是虚拟机可以继续执行。因为操作系统通过异步中断来非阻塞的表示网络和磁盘输出的完成，所以虚拟机只需要继续执行，并且不一定会立即受到输出延迟的影响。相反，先前的工作[3,9]通常表明在完成输出之前主机必须完全停止，直到备机已经确认了所有来自主机的必要信息。</p>
+          </div>
+
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-19-23_water.jpg"></p>
+<p>As an example, we show a <code>chart</code> <code>illustrating</code> the requirements of the FT protocol in Figure 2. This figure shows a timeline of events on the primary and backup VMs. The <code>arrows</code> going from the primary line to the backup line represent the transfer of log entries, and the arrows going from the backup line to the primary line represent acknowledgments. Information on asynchronous events, inputs, and output operations must be sent to the backup as log entries and acknowledged. As illustrated in the figure, an output to the external world is delayed until the primary VM has received an acknowledgment from the backup VM that it has received the log entry associated with an output operation. Given that the Output Rule is followed, the backup VM will be able to take over in a state consistent with the primary’s last output. There will be no loss of state even if the primary has had a non-deterministic event since its last output.</p>
+<div class="note info">
+            <p>作为例子，我们在图2中展示了一个图表说明容错协议的要求。该图展示了主机和备机上事件的时间线。主机线到备机线的箭头表示日志项的传输，备机线到主机线的箭头表示确认。异步事件的信息，输入，和输出操作都必须被发送给备机，以日志项的方式，然后由备机确认。如图中说明的那样，对于外部世界的输出会被延迟到主机已经接收到来自备机的确认信息，在备机收到和输出操作相关联的日志项的时候会进行确认。如果输出规则得以遵守，备机将能够以和主机最后输出一致性的状态进行接管。</p>
+          </div>
+
+<p>As <code>indicated</code> in [3, 9], we can not guarantee that all outputs are produced exactly once in a failover situation. Without the use of transactions with two-phase commit when the primary intends to send an output, there is no way that the backup can <code>determine</code> if a primary crashed immediately before or after sending its last output. Fortunately, the network <code>infrastructure</code> (including the common use of TCP) is designed to deal with lost packets and identical (duplicate) packets.</p>
+<div class="note info">
+            <p>如[3,9]所表示的，我们不能保证所有的输出都只被生成一次在故障转移的情况下。在主机尝试发送输出的时候不适用两阶段提交事务的话，就没有办法让备机判断主机是在崩溃之前还是之后发送了最后的输出。幸运的是，网络基础设施(包括常用的tcp)被设计为能够处理丢包和重包。</p>
+          </div>
+
+<p>Note that incoming packets to the primary may also be lost during a failure of the primary and therefore won’t be delivered to the backup. However, incoming packets may be dropped for any number of reasons unrelated to server failure, so the network infrastructure, operating systems, and applications are all written to ensure that they can <code>compensate</code> for lost packets.</p>
+<div class="note info">
+            <p>注意，传给主机的数据包在主机故障的时候也可能丢失因而不能被传递给备机。然而，传入的数据包可能出于一系列和服务器故障不相关的原因被丢弃，所以网络基础设施，操作系统和应用都被写入(意思应该是都要适配这个情况？ )来确保可以对丢失的包进行补偿</p>
+          </div>
+
+<hr>
+<h3 id="2-3-Detecting-and-Responding-to-Failure"><a href="#2-3-Detecting-and-Responding-to-Failure" class="headerlink" title="2.3 Detecting and Responding to Failure"></a>2.3 Detecting and Responding to Failure</h3><p>As mentioned above, the primary and backup VMs must respond quickly if the other VM appears to have failed. If the backup VM fails, the primary VM will go live – that is, leave recording mode (and hence stop sending entries on the logging channel) and start executing normally. If the primary VM fails, the backup VM should similarly go live, but the process is a bit more complex. Because of its lag in execution, the backup VM will likely have a number of log entries that it has received and acknowledged, but have not yet been <code>consumed</code> because the backup VM hasn’t reached the appropriate point in its execution yet. The backup VM must continue replaying its execution from the log entries until it has consumed the last log entry. At that point, the backup VM will stop replaying mode and start executing as a normal VM. <code>In essence</code>, the backup VM has been <code>promoted</code> to the primary VM (and is now missing a backup VM). Since it is no longer a backup VM, the new primary VM will now produce output to the external world when the guest OS does output operations. During the <code>transition</code> to normal mode, there may be some device-specific operations needed to allow this output to occur <code>properly</code>. In particular, for the purposes of networking, VMware FT automatically advertises the MAC address of the new primary VM on the network, so that physical network switches will know on what server the new primary VM is located. In addition, the newly promoted primary VM may need to <code>reissue</code> some disk IOs (as described in Section 3.4).</p>
+<div class="note info">
+            <p>如前面提到的那样，主机和备机必须在另一方故障的时候快速响应。如果备机故障，主机将会上线-指的是离开记录模式(因此停止在日志通道上发送日志项)并开始正常运行。如果主机故障，备机也会上线，但是处理会更加复杂一点。因为备机是延迟执行的，备机可能有一系列它已经接受和确认的的日志项，但是还没被消费完因为备机还没达到运行的合适时间点。备机必须继续重放来自日志项的运行知道消费完最后的日志项。然后备机将会停止重放模式然后开始正常运行，像普通虚拟机那样。本质上，备机已经被晋升为了主机(现在没有备机了)。因为已经不是备机了，新的主机将在guest os(运行在虚拟机上的操作系统)有输出操作的时候产生输出给外部世界。在过渡为正常模式的期间，可能会需要一些特定设备的操作来让输出正确发生。特别的，出于联网的目的，VMware容错会自动将新的主机的mac地址在网络进行通告，所以物理网络交换机将能够得知新的主机服务器的位置。另外，新的晋升的主机可能需要重发一些磁盘IO(像3.4节描述的那样)</p>
+          </div>
+
+<p>There are many possible ways to attempt to detect failure of the primary and backup VMs. VMware FT uses UDP heartbeating between servers that are running fault-tolerant VMs to detect when a server may have crashed. In addition, VMware FT monitors the logging traffic that is sent from the primary to the backup VM and the acknowledgments sent from the backup VM to the primary VM. Because of regular timer interrupts, the logging traffic should be regular and never stop for a functioning guest OS. Therefore, a <code>halt</code> in the flow of log entries or acknowledgments could indicate the failure of a VM or a networking problem. A failure is declared if heartbeating or traffic on the logging channel has stopped for longer than a specific timeout (<code>on the order of</code> a few seconds).</p>
+<div class="note info">
+            <p>对于尝试检测主机和备机故障有许多可能的方式。VMware容错使用运行在容错虚拟机上的服务器间的udp心跳包来检测哪台服务器已经宕掉了。另外，VMware容错监控从主机发给备机的日志和从备机发送给主机的确认信息的流量。因为经常的时钟中断，日志流量应该是规律的并且永远不会在guest os上停止。因此，日志项和确认信息流的暂停可能表明虚拟机或者网络问题引起的故障。如果心跳包或者日志通道流量停止了超过指定的超时时间(大约几秒钟)则表明这是故障</p>
+          </div>
+
+<p>However, any such failure detection method is <code>susceptible</code> to a split-brain problem. If the backup server stops receiving heartbeats from the primary server, that may indicate that the primary server has failed, or it may just mean that all network connectivity has been lost between still <code>functioning</code> servers. If the backup VM then goes live while the primary VM is actually still running, there will likely be data <code>corruption</code> and problems for the clients communicating with the VM. Hence, we must ensure that only one of the primary or backup VM goes live when a failure is detected. To avoid split-brain problems, we make use of the shared storage that is used to store the virtual disks of the VM. At the point where either a primary or backup VM wants to go live, it executes an atomic test-and-set operation on the shared storage. If the operation succeeds, the VM is allowed to go live. If the operation fails, then the other VM must have already gone live, so the current VM actually <code>halts</code> itself (“commits <code>suicide”</code>). If the VM cannot access the shared storage when trying to do the atomic operation, then it just waits until it can. Note that if shared storage is not accessible because of some failure in the storage network, then the VM would likely not be able to do useful work anyway because the virtual disks <code>reside</code> on the same shared storage. Thus, using shared storage to <code>resolve</code> split-brain situations does not <code>introduce</code> any extra unavailability.</p>
+<div class="note info">
+            <p>然而，任何这类故障检测方法都容易收到脑裂问题的影响。如果备机停止从主机接收心跳包，可能意味着主机故障了，也可能只是因为仍在运行的服务器间的所有网络连接都丢失了。如果备机接着在主机仍旧运行的情况下上线，这可能引起数据损坏或者客户端与虚拟机通信的问题。因此，我们必须确保只有一台主机或备机上线，在故障被检测到的时候。为了避免脑裂的问题，我们使用用来存储虚拟机虚拟磁盘的共享存储。在主机或备机想上线的时候，在共享存储上执行一个原子的test-and-set锁指令。如果操作指令成功，则虚拟机可以上线。如果指令失败，则另外的虚拟机肯定仍在运行，所以当前的虚拟机实际上会结束运行(提交suicide).如果虚拟机无法访问共享存储，在尝试做原子操作指令的时候，只需要一直等到可以访问的时候。记住如果共享存储因为一些存储网络故障导致不能访问，那么虚拟机可能无论如何都不能正常工作，因为虚拟机磁盘也在共享存储上面。因此，使用共享存储来解决脑裂问题不会带来任何额外的不可用</p>
+          </div>
+
+<p>One final <code>aspect</code> of the design is that once a failure has occurred and one of the VMs has gone live, VMware FT automatically restores <code>redundancy</code> by starting a new backup VM on another host. Though this process is not covered in most previous work, it is <code>fundamental</code> to making fault-tolerant VMs useful and requires careful design. More details are given in Section 3.1.</p>
+<div class="note info">
+            <p>该设计的最后一个方面是一旦故障已经发生了并且其中一个虚拟机已经上线了，VMware容错会自动通过在另外主机上启动新的备机来恢复冗余。即使前面大部分没有提及这个过程，但是这一点对于实现有用的容错系统是基础的，并且需要仔细设计。更多的细节见3.1节。</p>
+          </div>
+
+<hr>
+<h3 id="2-4-Go-live-Points"><a href="#2-4-Go-live-Points" class="headerlink" title="2.4 Go-live Points"></a>2.4 Go-live Points</h3><p>The use of deterministic replay for fault tolerance purposes has driven us to add an interesting mechanism to our replay implementation. Because of network issues or the failure of the primary at any point, the stream of log entries being read and replayed by the backup can be terminated at any point. The possibility of termination at any point in the log can <code>permeate</code> the deterministic replay implementation, since each <code>potential</code> consumer of a log entry (such as a virtual device implementation) would need to check for and deal with the fact that an expected log entry is not available. <code>For instance</code>, given previous log entries and its current state, a virtual device implementation may expect a number of additional log entries about IO completions. The code that is replaying the device will have to be written to check for the end of the log stream, exit some possibly complex replaying code, and restore the device to a reasonable state so that the VM can go live.</p>
+<div class="note info">
+            <p>为了容错使用的确定性重放驱使我们在我们的重放实现中增加了一种有趣的机制。因为会有网络问题以及主机故障可能发生在任何时刻，由备机正在读取或者重放的日志项流也可能在任何时刻终止。日志项在任何时刻终止的可能性会扩散到确定性重放的实现，因为每一个日志项(比如一个虚拟的设备实现)的潜在消费者都需要检查和处理所需日志不可用的问题。比如，给定一个之前的日志项和它现在的状态，虚拟设备实现可能需要一系列有关IO实现的额外的日志项。需要编写重放部分的代码来检查日志流的结束，退出一些可能复杂的重放代码，回复设备到合理的状态，使之可以在虚拟机上go live.</p>
+          </div>
+
+<p>To <code>alleviate</code> this <code>burden</code> on many components of the system, we have implemented go-live points. Any individual log entry can be marked as a go-live point. The idea is that a log entry that is marked as a go-live point represents the last log entry in <code>a series of</code> log entries necessary for replaying an instruction or a particular device operation. If a particular operation or instruction requires several log entries to be recorded, then only the last log entry would be marked as a go-live point. In practice, the hypervisor automatically marks the last new log entry as a go-live point when it has completed all event and device processing for a given instruction.</p>
+<div class="note info">
+            <p>为了减轻系统上多数组件的负担，我们已经实现了go-live points.任何单个日志项都可以被标记为go-live points.思想是一个被标记为go-live point的日志项可以用来表示对于重放一个指令或者特别的设备操作必要的一系列日志项中的最后一个日志项。如果一个特别的操作或者指令需要一部分被记录的日志项，那么仅最后的日志项会被标记为go-live point.实际上，虚拟机管理程序会自动标记最后的一个新的日志项为go-live point,在它完成给定指令的所有事件和设备处理的时候。</p>
+          </div>
+
+<p>Go-live points are used during replaying as follows. While all log entries read from the logging channel are buffered by the hypervisor on the virtual machine that is replaying, only the log entries up to the last go-live point are allowed to be consumed by the replaying (backup) VM. That is, the replaying VM will <code>stall</code> after consuming the last log entry <code>tagged</code> as a go-live point until another series of log entries containing a log entry with a go-live point has been fetched by the hypervisor. The result is that if there is a series of log entries associated with a device operation, the virtual device implementation can <code>assume</code> that all the needed log entries will be available if the first log entry is encountered. Thus, the virtual device implementation does not have to do all the extra checking and recovery code needed if the log entries could be terminated at any point. Similarly, whenever a single instruction executed <code>on behalf of</code> the virtual machine generates multiple log entries, the hypervisor of the replaying virtual machine begins the <code>emulation</code> of that instruction only if all the log entries necessary for completing the emulation of that instruction are available. The <code>tagging scheme</code> doesn’t introduce any significant delay of the replaying VM, since the hypervisor of the recording (primary) VM guarantees that last log entry of each single instruction emulation or a device operation is marked as a go-live point. Since the backup VM cannot be <code>significantly</code> delayed, the primary VM is also not affected by the use of go-live points.</p>
+<div class="note info">
+            <p>go-live points在重放期间的使用如下。当所有从日志通道读取的日志项都被虚拟机管理程序缓存在正在重放的虚拟机上。只有最后的go-live point之前的日志项可以被重放的备机消费。也就是说，正在重放的虚拟机在消费最后一个被标记为go-live point的日志项之后会停止运行直到一系列包含go-live point的日志项已经被虚拟机管理程序拉取。结果是如果有一系列和设备操作关联的日志项，如果虚拟设备实现遇到了第一个日志项，就可以假定所有需要的日志项都是可用的。因此，虚拟设备实现不需要做所有额外的检查和恢复代码，如果日志项可以在任何时刻终止。类似的，任何代表虚拟机执行的单个指令生成多个日志项的时候，重放虚拟机的虚拟机管理程序仅在所有的对于完成指令仿真有必要的日志项都是可用的时候，才开始指令的模拟。标记方案不会对正在重放的虚拟机带来任何明显的延迟，因此记录(primary)虚拟机的虚拟机管理程序保证每一个模拟指令或者设备操作的最后的日志项被标记为go-live point.因此备机不会有明显的延迟，主机也不会受到go-live point的影响。</p>
+          </div>
+
+<hr>
+<h2 id="3-Practical-Implementation-of-FT"><a href="#3-Practical-Implementation-of-FT" class="headerlink" title="3 Practical Implementation of FT"></a>3 Practical Implementation of FT</h2><p>Section 2 described our fundamental design and protocols for FT. However, to create a usable, <code>robust</code>, and automatic system, there are a great many other components that must be designed and implemented.</p>
+<div class="note info">
+            <p>第2节描述了容错的基础设计和协议。但是为了创建一个可用的，健壮的自动化系统，还需要设计实现许多其他组件。</p>
+          </div>
+
+<hr>
+<h3 id="3-1-Starting-and-Restarting-FT-VMs"><a href="#3-1-Starting-and-Restarting-FT-VMs" class="headerlink" title="3.1 Starting and Restarting FT VMs"></a>3.1 Starting and Restarting FT VMs</h3><p>One of the biggest additional components that must be designed is the mechanism for starting a backup VM in the same state as a primary VM. This mechanism will also be used when restarting a backup VM after a failure has occurred. Hence, this mechanism must be usable for a running primary VM that is in an <code>arbitrary</code> state (i.e. not just starting up). In addition, we would prefer that the mechanism does not significantly <code>disrupt</code> the execution of the primary VM, since that will directly affect any current clients of the VM.</p>
+<div class="note info">
+            <p>必须设计的最大的额外组件之一是以和主机相同的状态启动备机的机制。这个机制在故障发生重启备机的时候也会用到。因此，该机制对于运行任意状态(不仅仅是启动)的主机必须是可用的。另外，我们更希望该机制不会明显的打断主机的运行，因此这会影响到所有连接虚拟机的客户端。</p>
+          </div>
+
+<p>For VMware FT, we adapted the existing VMotion functionality of VMware vSphere. VMware VMotion [10] allows the <code>migration</code> of a running VM from one server to another server with minimal disruption – VM pause times are typically less than a second. We created a modified form of VMotion that creates an exact running copy of a VM on a remote server, but without destroying the VM on the local server. That is, our modified FT VMotion clones a VM to a remote host rather than migrating it. The FT VMotion also sets up a logging channel, causes the source VM to enter logging mode as the primary, and the destination VM to enter replay mode as the new backup. Like normal VMotion, FT VMotion typically <code>interrupts</code> the execution of the primary VM by less than a second. Hence, enabling FT on a running VM is an easy, non-<code>disruptive</code> operation.</p>
+<div class="note info">
+            <p>对于VMware容错系统，我们适配了VMware vSphere的现有Vmotion功能。VMware VMotion可以在最小化中断的代价下将运行的虚拟机从一台服务器迁移到另一台服务器-虚拟机的暂停时间通常小于1秒。我们创建了一个修改版的Vmotion，通过在远端服务器上创建一个精确的虚拟机的运行拷贝，而不需要摧毁本地服务器上的虚拟机。也就是说，修改版的容错Vmotion克隆一个虚拟机到远端服务器而不是迁移虚拟机。容错Vmotion也会建立一个日志通道，源虚拟机会作为主机进入日志模式，目的虚拟机作为新的备机进入重放模式。和普通版本的Vmotion一样，容错Vmotion通常打断主机的时间少于1秒。因此，在运行中虚拟机启用容错是简单，无中断的操作</p>
+          </div>
+
+<p>Another aspect of starting a backup VM is choosing a server on which to run it. Faulttolerant VMs run in a cluster of servers that have access to shared storage, and so all VMs can typically run on any servers in the cluster. This <code>flexibility</code> allows VMware vSphere to restore FT redundancy even when one or more servers have failed. VMware vSphere implements a <code>clustering</code> service that maintains <code>management</code> and resource information. When a failure happens and a primary VM now needs a new backup VM to <code>re-establish</code> redundancy, the primary VM <code>informs</code> the clustering service that it needs a new backup. The clustering service determines the best server on which to run the backup VM based on resource allocations, usage, and other <code>constraints</code>. Then the clustering service automatically invokes an FT VMotion to create the new backup VM. Of course, there are many additional <code>complexities</code>, such as retrying if a first attempt to create a backup fails and automatically detecting when a server in the cluster becomes newly available. The end result is that VMware FT typically can re-establish VM redundancy within minutes of a server failure, all without any <code>noticeable</code> interruption in the execution of a fault-tolerant VM.</p>
+<div class="note info">
+            <p>启动备机的另一个方面是选择哪台服务器来运行。容错虚拟机运行在访问共享存储的服务器集群上，因而所有的虚拟机是运行在集群中任意的服务器的。这种灵活性让VMware vSphere能够恢复容错冗余在一台或者多台服务器故障的时候。VMware vSphere实现了一个集聚服务来维护管理和资源信息。当故障发生而主机需要一个新的备机重建冗余的时候，主机会通知集聚服务它需要一个新的备机。集聚服务基于资源申请，使用和其他约束来选择运行备机的最佳服务器。然后集聚服务自动调用容错Vmotion来创建新的备机。当然，也有许多额外的复杂性，比如在第一次创建备机失败后的重试，和自动检测集群中服务器什么时候变为新的可用状态。最后的结果是VMware容错可以重建虚拟机冗余在服务器故障后几分钟，而不会对容错虚拟机执行有明显的打断。</p>
+          </div>
+
+<hr>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-19-37_water.jpg"></p>
+<h3 id="3-2-Managing-the-Logging-Channel"><a href="#3-2-Managing-the-Logging-Channel" class="headerlink" title="3.2 Managing the Logging Channel"></a>3.2 Managing the Logging Channel</h3><p>There are a number of interesting implementation details in managing the traffic on the logging channel. In our implementation, the hypervisors maintain a large buffer for logging entries for the primary and backup VMs. As the primary VM executes, it produces log entries into the log buffer, and similarly, the backup VM consumes log entries from its log buffer. The contents of the primary’s log buffer are flushed out to the logging channel as soon as possible, and log entries are read into the backup’s log buffer from the logging channel as soon as they arrive. The backup sends acknowledgments back to the primary each time that it reads some log entries from the network into its log buffer. These acknowledgments allow VMware FT to determine when an output that is delayed by the Output Rule can be sent. Figure 3 illustrates this process.</p>
+<div class="note info">
+            <p>管理日志通道的流量有一系列有趣的实现细节。在我们实现中，虚拟机管理程序维护了一个大的缓冲，保存了主机和备机的日志项。当主机运行的时候，会产生日志项到日志缓冲，类似的，备机从日志缓冲消费日志项。主机日志缓冲的内容会尽快刷到日志通道中，日志项写到日志缓冲后也会尽快读取到备机的日志缓冲中。备机发送确认信息给主机，在每一次通过网络读取一些日志项到日志缓冲的时候。这些确认信息让VMvare容错能够决定什么时候被输出规则延迟的输出可以被发送。图3说明了这个过程。</p>
+          </div>
+
+<p>If the backup VM <code>encounters</code> an empty log buffer when it needs to read the next log entry, it will stop execution until a new log entry is available. Since the backup VM is not communicating <code>externally</code>, this pause will not affect any clients of the VM. Similarly, if the primary VM encounters a full log buffer when it needs to write a log entry, it must stop execution until log entries can be <code>flushed out</code>. This stop in execution is a natural flowcontrol mechanism that <code>slows down</code> the primary VM when it is producing log entries at too fast a rate. However, this pause can affect clients of the VM, since the primary VM will be completely stopped and unresponsive until it can log its entry and continue execution. Therefore, our implementation must be designed to minimize the possibility that the primary log buffer fills up.</p>
+<div class="note info">
+            <p>如果备机在读取新的日志项的时候遇到了空的日志缓冲，则会停止运行知道日志项变为可用。因为备机不是在外部通信，这种暂停不会虚拟机的客户端有影响。相似的，如果主机在需要写入日志项的时候发现复制缓冲满了，也会停止运行知道日志项被清除了。主机的停止是自然的流控机制，可以在生成的日志项速率过快的时候降低速度。然而，这种暂停会影响虚拟机的客户端，因为主机会完全停止变为不响应知道可以写入日志继续运行的时候。因此，我们的实现必须设计为最小化主机日志缓冲满的可能性</p>
+          </div>
+
+<p>One reason that the primary log buffer may fill up is because the bandwidth of the logging channel is too low to <code>carry</code> the <code>volume</code> of log entries being produced. While the bandwidth on the logging channel is typically not high (as seen in Section 5), we strongly <code>recommend</code> the use of a 1 Gbit/s network for the logging channel to avoid any possibility of a bottleneck.</p>
+<div class="note info">
+            <p>主机日志缓冲满的一个原因是日志通道的带宽太小以至于无法承载正在生成的日志项的容量。因为日志通道的带宽通常不太高(见第5节)，我们强烈建议对于日志通道使用1Gbit/s的网络来避免网络瓶颈。</p>
+          </div>
+
+<p>Another reason that the primary log buffer may fill up is because the backup VM is executing too slowly and therefore consuming log entries too slowly. In general, the backup VM must be able to replay an execution at <code>roughly</code> the same speed as the primary VM is recording the execution. Fortunately, the overhead of recording and replaying in VMware <code>deterministic</code> replay is roughly the same. However, if the server hosting the backup VM is heavily loaded with other VMs (and hence <code>overcommitted</code> on resources), the backup VM may not be able to get enough CPU and memory resources to execute as fast as the primary VM, <code>despite</code> the best efforts of the backup hypervisor’s VM scheduler.</p>
+<div class="note info">
+            <p>主机缓冲满的另一个可能原因是备机执行过慢以至于消费日志项太慢。通常，备机必须能以和主机记录执行大致相同的速度重放执行。幸运的是，VMware确定性重放中记录和重放的负载是大致相同的。然而，如果承载备机的服务器也加载了其他的虚拟机(因此使用资源过渡)，备机可能无法获得足够的cpu和内存资源以和主机相同的速度执行，即使备机虚拟机管理程序的虚拟机调度器尽最大的努力</p>
+          </div>
+
+<p><code>Beyond</code> avoiding unexpected pauses if the log buffers fill up, there is another reason why we don’t wish the execution <code>lag</code> to become too large. If the primary VM fails, the backup VM must <code>“catch up”</code> by replaying all the log entries that it has already acknowledged before it goes live and starts communicating with the external world. The time to finish replaying is <code>basically</code> the execution lag time at the point of the failure. Hence, the time for the backup to go live is roughly equal to the failure detection time plus the current execution lag time. So, we don’t wish the execution lag time to be large (more than a second), since that will add significant time to the failover time (the time for the backup to go live).</p>
+<div class="note info">
+            <p>除了避免在日志缓冲满时不希望的暂停，还有另外原因是我们不希望执行的滞后变得太大。如果主机故障了，备机必须通过重放所有的在上线并开始和外部世界通信前已经确认了的日志项来赶上主机。结束重放的时间基本上是故障点的执行滞后时间。因此，备机上线的时间大致等于故障检测时间加上当前执行滞后时间。所以，我们不希望执行滞后时间太大(超过1秒)，因为这将明显的增加故障转移的时间(备机上线的时间)</p>
+          </div>
+
+<p>Therefore, we have an additional mechanism to slow down the primary VM to <code>prevent</code> the backup VM from getting too far behind. In our protocol for sending and acknowledging log entries, we send additional information to determine the real-time execution lag between the primary and backup VMs. Typically the execution lag is less than 100 milliseconds. If the backup VM starts having a significant execution lag (say, more than 1 second), VMware FT starts slowing down the primary VM by informing the scheduler to give it a <code>slightly smaller share</code> of the CPU (initially by just a few percent). We use a slow <code>feedback</code> loop,<br>which will try to <code>gradually</code> <code>pinpoint</code> the appropriate CPU share for the primary VM that will allow the backup VM to match its execution. If the backup VM continues to lag behind, we continue to gradually reduce the primary VM’s CPU share. <code>Conversely</code>, if the backup VM catches up, we gradually increase the primary VM’s CPU share until the backup VM returns to having a slight lag.</p>
+<div class="note info">
+            <p>因此，我们有一个额外的机制来减慢主机的速度，避免备机落后太多。在发送和确认日志项的协议中，会发送额外的信息来决定实时的运行延迟，在主机和备机之间。通常执行延迟少于100毫秒。如果备机开始有了明显的执行延迟(比如超过1秒)，VMware容错会开始减慢主机的速度，通过通知调度器给主机更少的cpu份额(初始时只有百分之几)。我们使用一个慢反馈环，会逐渐的精确话对于主机的cpu份额来让备机匹配上主机的运行。如果备机仍旧落后，我们会继续降低主机的cpu份额。相反了，如果备机追上了主机，我们会逐渐的增加主机的cpu份额知道备机返回微小的延迟</p>
+          </div>
+
+<p>Note that such <code>slowdowns</code> of the primary VM are very <code>rare</code>, and typically happen only when the system is under <code>extreme</code> <code>stress</code>. All the performance numbers of Section 5 include the cost of any such slowdowns.</p>
+<div class="note info">
+            <p>注意对于主机的减速是很罕见的，通常只在系统处于极端压力的情况下发生。第5节的所有性能数字包含了这些减速的成本。</p>
+          </div>
+
+<hr>
+<h3 id="3-3-Operation-on-FT-VMs"><a href="#3-3-Operation-on-FT-VMs" class="headerlink" title="3.3 Operation on FT VMs"></a>3.3 Operation on FT VMs</h3><p>Another practical <code>matter</code> is dealing with the various control operations that may be applied to the primary VM. For example, if the primary VM is explicitly <code>powered off</code>, the backup VM should be stopped as well, and not attempt to go live. As another example, any resource management change on the primary (such as increased CPU share) should also be applied to the backup. For these kind of operations, special control entries are sent on the logging channel from the primary to the backup, in order to effect the appropriate operation on the backup.</p>
+<div class="note info">
+            <p>另一个实际的问题是处理多种可能被应用于主机的控制操作。比如，当主机显式关机的时候，备机也应该关机，而不是尝试上线。另一个例子，主机上任何的资源管理改变(比如增加了cpu份额)也应该应用到备机。对于这些操作，特殊的控制项会通过日志通道从主机发送给备机，为了在备机上也应用适当的操作</p>
+          </div>
+
+<p>In general, most operations on the VM should be initiated only on the primary VM. VMware FT then sends any necessary control entry to cause the appropriate change on the backup VM. The only operation that can be done independently on the primary and backup VM is VMotion. That is, the primary and backup VM can each be VMotioned independently to other hosts. Note that VMware FT ensures that neither VM is VMotioned to the server where the other VM is, since that situation would no longer provide fault tolerance.</p>
+<div class="note info">
+            <p>通常，虚拟机的多数操作仅在主机上初始化。VMware容错会发送所有必要的控制项在备机上应用适当的变更。唯一可以在主机和备机上独立执行的操作是VMotion.也就是说，主机和备机可以分别独立的Vmotiond到其他主机。注意，VMware容错确保主机和备机都不会被VMotioned到对方所在的服务器上，因为这种情况下不再提供容错</p>
+          </div>
+
+<p>VMotion of a primary VM adds some complexity over a normal VMotion, since the backup VM must disconnect from the source primary and re-connect to the destination primary VM at the appropriate time. VMotion of a backup VM has a similar issue, but adds an additional complexity. For a normal VMotion, we require that all <code>outstanding</code> disk IOs be <code>quiesced</code> (i.e. completed) just as the final <code>switchover</code> on the VMotion occurs. For a primary VM, this quiescing is easily handled by waiting until the physical IOs complete and delivering these completions to the VM. However, for a backup VM, there is no easy way to cause all IOs to be completed at any required point, since the backup VM must replay the primary VM’s execution and complete IOs at the same execution point. The primary<br>VM may be running a workload in which there are always disk IOs <code>in flight </code>during normal execution. VMware FT has a unique method to solve this problem. When a backup VM is at the final switchover point for a VMotion, it requests via the logging channel that the primary VM temporarily quiesce all of its IOs. The backup VM’s IOs will then naturally be quiesced as well at a single execution point as it replays the primary VM’s execution of the quiescing operation.</p>
+<div class="note info">
+            <p>主机的Vmotion相对于普通Vmotion增加了一些复杂性，因为备机必须和源主机断开连接然后在合适的时间重新连接到目的主机。备机的VMtion有相同的问题，但是增加了额外的复杂性。对于普通的Vmotion,我们要求所有未完成的磁盘IO都暂停(即完成)就像VMotion上发生的最终切换。对于主机，这种暂停容易处理，可以一直等待直到物理IO完成并发送完成信息给虚拟机。然而，对于备机，没有简单的方法在任何需要的时间点让所有IO完成，因为备机必须重放主机的执行并且在相同的执行点完成IO.主机可以运行在总是有磁盘IO的工作负载上，在正常运行期间。VMware容错有独特的方法解决这个问题。当备机在VMotion的最终切换点的时候，它通过日志通道要求主机临时停止所有的IO.备机的IO也会在单独的执行点上自然的暂停，因为备机会重放主机暂停操作的执行命令</p>
+          </div>
+
+<hr>
+<h3 id="3-4-Implementation-Issues-for-Disk-IOs"><a href="#3-4-Implementation-Issues-for-Disk-IOs" class="headerlink" title="3.4 Implementation Issues for Disk IOs"></a>3.4 Implementation Issues for Disk IOs</h3><p>There are a number of <code>subtle</code> implementation issues related to disk IO. First, given that disk operations are non-blocking and so can execute in <code>parallel</code>, <code>simultaneous</code> disk operations that access the same disk location can lead to non-determinism. Also, our implementation of disk IO uses DMA directly to/from the memory of the virtual machines, so simultaneous disk operations that access the same memory pages can also lead to non-determinism. Our solution is generally to <code>detect</code> any such IO races (which are rare), and force such racing disk operations to execute sequentially in the same way on the primary and backup. Interestingly, a single disk read operation can cause a race as well, since its <code>scatter-gather</code> array could reference the same block of memory multiple times, hence <code>leaving</code> the final contents of the memory block undetermined. Our solution is to detect this racing IO as well, and in this case ensure that the final contents of memory are sent on the logging channel, so the backup ends up with the same memory contents.</p>
+<div class="note info">
+            <p>有一些和磁盘IO相关的细微的实现问题。首先，非阻塞的磁盘操作可以并行执行，因此对同一磁盘位置的同时访问可能导致不确定性。我们对磁盘IO的实现使用DMA直接读写虚拟机内存，所有对于相同内存页的同时访问也可能导致不确定性。我们的解决方案通常是检测所有这类IO竞争(是很罕见的)，然后强制这些竞争的磁盘操作以相同的方式在主机和备机上顺序执行。有趣的是，单个磁盘读取操作也可能造成竞争，因为散聚的阵列可能引用相同的内存块多次，而导致内存页的内容变得不确定性。我们的解决方案还是检测这些竞争，保证在这种情况下最后的内存内容会在日志通道上发送，这样备机可以以相同的内存内存结束。</p>
+          </div>
+
+<p>Second, a disk operation can also race with a memory access by an application (or OS) in a VM, because the disk operations directly access the memory of a VM via DMA. For example, there could be a non-deterministic result if an application/OS in a VM is reading a memory block at the same time a disk read is occurring to that block. This <code>situation</code> is also unlikely, but we must detect it and deal with it if it happens. One solution is to set up page protection <code>temporarily</code> on pages that are targets of disk operations. The page protections result <code>in a trap</code> if the VM happens to make an access to a page that is also the target of an outstanding disk operation, and the VM can be paused until the disk operation completes. Because changing MMU protections on pages is an expensive operation, we choose instead to use <code>bounce</code> buffers. A bounce buffer is a temporary buffer that has the same size as the memory being accessed by a disk operation. A disk read operation is modified to read the specified data to the bounce buffer, and the data is copied to guest memory only as the IO completion is delivered. Similarly, for a disk write operation, the data to be sent is first copied to the bounce buffer, and the disk write is modified to write data from the bounce buffer. The use of the bounce buffer can slow down disk operations, but we have not seen it cause any noticeable performance differences.</p>
+<div class="note info">
+            <p>第二，虚拟机上的应用程序(或操作系统)的有关内存访问的磁盘操作也可能产生竞争，因为磁盘操作直接通过DMA访问内存。比如，如果虚拟机中的应用程序/操作系统在同一时间读取一个正在发生磁盘读取的内存块可能会导致不确定性。这种情况也是类似的，但是我们必须检测并解决它在发生的时候。我们的解决方案是设置临时的页保护在由磁盘操作标记的页上。如果虚拟机碰巧对未完成磁盘操作的标记页进行访问则页保护最终会进入陷阱，虚拟机会被暂停直到磁盘操作完成。因为修改页上的MMU保护是昂贵的操作，所以我们使用了bounce buffers. Bounce buffer是和由磁盘操作正在访问的内存大小一致的临时缓冲。磁盘读操作被修改为在bounce buffer中读取特定数据，并且数据仅在IO操作完成并被传递的时候拷贝到虚拟机内存。类似的，对于磁盘写操作，将要被发送的数据会先拷贝到bounce buffer,磁盘写操作位被修改为写数据到bounce buffer. Bounce buffer的使用能够减慢磁盘操作，但是我们还没有看到任何明显的性能差异。</p>
+          </div>
+
+<p>Third, there are some issues associated with disk IOs that are outstanding (i.e. not completed) on the primary when a failure happens, and the backup takes over. There is no way for the newly-promoted primary VM to be sure if the disk IOs were <code>issued</code> to the disk or completed successfully. In addition, because the disk IOs were not issued externally on the backup VM, there will be no explicit IO completion for them as the newly-promoted primary VM continues to run, which would eventually cause the guest operating system in the VM to start an abort or reset <code>procedure</code>. Therefore, we would like to ensure that a completion is sent to the VM for each pending IO. We could send an error completion that indicates that each IO failed, since it is acceptable to return an error even if the IO completed successfully. However, the guest OS might not respond well to errors from its local disk. Instead, we re-issue the IOs during the go-live process of the VM. Because we have <code>eliminated</code> all races and all IOs specify directly which memory and disk blocks are accessed, these disk operations can be re-issued even if they have already completed successfully (i.e. they are <code>idempotent</code>).</p>
+<div class="note info">
+            <p>第三，当主机故障的时候在主机上可能会有一些未完成的和磁盘IO相关的问题，而备机进行了接管。对新提升的主机就没有办法确定磁盘IO被发布到磁盘还是已经成功完成。另外，因为磁盘IO没有在外部的备机进行发布，当新提升的主机继续运行的时候，不会有明确的IO完成，最终可能导致虚拟机的虚拟机操作系统开始终止或者重置程序。因此，我们希望确保对于每一个挂起的IO，完成信息被发送给虚拟机。我们可以发送错误完成信息来表明IO失败，因为即使IO成功完成，返回错误也是可接受的。然而，虚拟机操作系统可能不会从本地磁盘很好的响应错误。相反，我们在虚拟机go-live的过程重新发布IO。因为我们已经消除了所有的竞争并且所有的IO直接指定了要访问的内存和磁盘块，这些磁盘操作可以重新发布即使已经成功完成了（即是幂等的)</p>
+          </div>
+
+<hr>
+<h3 id="3-5-Implementation-Issues-for-Network-IO"><a href="#3-5-Implementation-Issues-for-Network-IO" class="headerlink" title="3.5 Implementation Issues for Network IO"></a>3.5 Implementation Issues for Network IO</h3><p>VMware vSphere provides many performance optimizations for VM networking. Many of these optimizations are based on the hypervisor asynchronously updating the state of the virtual machine’s network device. For example, receive buffers can be updated directly by the hypervisor while the VM is executing. Unfortunately these asynchronous updates to a VM’s state add non-determinism. Unless we can guarantee that all updates happen at the same point in the <code>instruction</code> stream on the primary and the backup, the backup’s execution can <code>diverge</code> from that of the primary.</p>
+<div class="note info">
+            <p>VMware vSphere对于虚拟机网络提供了许多性能优化。多数这些优化是基于虚拟机管理程序异步更新虚拟机网络设备的状态。比如，在虚拟机运行的时候接收缓冲区可以被虚拟机管理程序直接更新。不幸的是，这种对于虚拟机状态的异步更新增加了不确定性。除非我们能够保证所有的更新在主机和备机的指令流同时发生，否则备机的执行可能和主机不同</p>
+          </div>
+
+<p>The biggest change to the networking <code>emulation</code> code for fault tolerance is the <code>elimination</code> of the asynchronous network optimizations. All updates to VM networking state must be done while the VM is not executing instructions so we can log the updates and replay the updates on the backup at the same point in the instruction stream. The code that asynchronously updates VM <code>ring</code> buffers with incoming packets has been modified to instead force the guest to <code>trap to</code> the hypervisor where it can log the updates and then apply them to the VM. Similarly, code that previously pulled packets out of <code>transmit</code> queues asynchronously has been disabled for FT and instead we require transmits to be done through a trap to the hypervisor (except as noted below).</p>
+<div class="note info">
+            <p>对于容错的网络仿真代码的最大改变是消除了异步网络优化。所有对于虚拟机网络状态的更新必须在虚拟机不执行指令的时候完成，以便我们可以记录更新日志并在备机上指令流的同一点重放。异步更新虚拟机ring buffer的代码被修改为强制guest陷入到虚拟机管理程序，在虚拟机管理程序里可以更新然后应用更新日志带虚拟机。类似的，之前异步拉取传输队列的包的代码被容错禁用了，取而代之的我们要求通过陷入到虚拟机管理程序来完成传输(如下所示)</p>
+          </div>
+
+<p>The elimination of the asynchronous updates of the network device combined with the delaying of sending packets described in Section 2.2 has provided some performance challenges for networking. We’ve taken two approaches to improving VM network performance while running FT. First, we implemented clustering optimizations to reduce VM traps and interrupts. When we are streaming data at a <code>sufficient</code> bit rate, we are able to do one transmit trap per group of packets and, in the best case, zero traps, since we can transmit the packets as part of receiving new packets. <code>Likewise</code>, we can reduce the number of interrupts to the VM for incoming packets by only posting the interrupt for a group of packets.</p>
+<div class="note info">
+            <p>网络设备异步更新的消除和2.2节描述的发送包的延迟，为网络的性能带来了挑战。我们已经使用两种方法来提高运行容错的虚拟机的网络性能。首先，我们实现了集群优化来江都虚拟机的陷入和中断。当我们以足够的比特率传输数据，我们可以对于每一组包进行一次传输陷入，最好的情况下是0陷入，因为我们将包作为新接收的包的一部分进行传输。同样的，我们通过对每一组包发送一次中断，来降低对于传入包的虚拟机的中断次数。</p>
+          </div>
+
+<p>Our second performance optimization for networking <code>involves</code> reducing the delay for transmitted packets. As noted earlier, we have to delay all transmitted packets until we get an acknowledgment from the backup that it has received the appropriate log entries. The key to reducing the transmit delay is to reduce the time required to send a log message to the backup and get an acknowledgment. Our primary optimizations in this area involve ensuring that sending and receiving log entries and acknowledgments can all be done without any thread context switch. The VMware vSphere hypervisor allows functions to be registered<br>with the TCP stack that will be called from a <code>deferred-execution</code> context (similar to a <code>tasklet</code> in Linux) whenever TCP data is received. This allows us to quickly handle any incoming log messages on the backup and any acknowledgments received by the primary without any thread context switches. In addition, when the primary VM enqueues a packet to be transmitted, we force an immediate log flush of the associated output log entry (as described in Section 2.2) by scheduling a deferred-execution context to do the flush.</p>
+<div class="note info">
+            <p>我们对于网络的第二个性能优化涉及降低传输包的延迟。如前面提到的，我们必须延迟所有的传输包直到获取了备机的确认信息，在备机接受到合适的日志项。降低传输延迟的关键是降低要求的发送给备机的日志信息和获取更新的时间。我们在这个方面的主要优化设计确保发送接受日志项和确认信息都在不发生线程上下文切换的情况下完成。VMware vSphere虚拟机管理程序允许函数被注册为TCP栈，任何接收到tcp数据的时候，将在推迟执行上下文中调用(类似linux的软中断)。这允许我们在备机上快速处理所有的输入日志项和由主机收到的确认信息，而不会发生任何的线程上下文切换。另外，当主机将需要被传输的包入队，我们通过调度延迟执行上下文来将需要立即刷新的和输出日志项关联的日志进行刷新。</p>
+          </div>
+
+<hr>
+<h2 id="4-Design-Alternatives"><a href="#4-Design-Alternatives" class="headerlink" title="4 Design Alternatives"></a>4 Design Alternatives</h2><p>In our implementation of VMware FT, we have explored a number of interesting design alternatives. In this section, we explore some of these alternatives.</p>
+<div class="note info">
+            <p>在我们VMware容错的实现中，我们已经探索了许多有趣的设计替代方案。在这一节，我们探索一部分替代方案</p>
+          </div>
+
+<hr>
+<h3 id="4-1-Shared-vs-Non-shared-Disk"><a href="#4-1-Shared-vs-Non-shared-Disk" class="headerlink" title="4.1 Shared vs. Non-shared Disk"></a>4.1 Shared vs. Non-shared Disk</h3><p>In our default design, the primary and backup VMs share the same virtual disks. Therefore, the content of the shared disks is naturally correct and available if a failover occurs. <code>Essentially</code>, the shared disk is considered external to the primary and backup VMs, so any write to the shared disk is considered a communication to the external world. Therefore, only the primary VM does actual writes to the disk, and writes to the shared disk must be delayed in <code>accordance</code> with the Output Rule. The shared disk model is the one used in [3, 9, 7].</p>
+<div class="note info">
+            <p>在我们的缺省设计中，主机和备机共享相同的虚拟磁盘。因此，共享磁盘的内容在故障转移发生的时候自然是正确和可用的。基本上，共享磁盘被认为在主机和备机的外部，所以共享磁盘的写入是到外部世界的通信。因此，只有主机实际上写磁盘，共享磁盘的写入以和输出规则一致的方式进行延迟。共享磁盘模型在[3, 9, 7]中使用</p>
+          </div>
+
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-19-51_water.jpg"></p>
+<p>An alternative design is for the primary and backup VMs to have separate (non-shared) virtual disks. In this design, the backup VM does do all disk writes to its virtual disks, and in doing so, it naturally keeps the contents of its virtual disks in sync with the contents of the primary VM’s virtual disks. Figure 4 illustrates this configuration. In the case of nonshared disks, the virtual disks are <code>essentially</code> considered part of the internal state of each VM. Therefore, disk writes of the primary do not have to be delayed according to the Output Rule. The non-shared design is quite useful in cases where shared storage is not accessible to the primary and backup VMs. <code>This may be the case because</code> shared storage is unavailable or too expensive, or because the servers running the primary and backup VMs are <code>far apart</code> (“long-distance FT”). One disadvantage of the non-shared design is that the two copies of the virtual disks must be explicitly synced up in some manner when fault tolerance is first enabled. In addition, the disks can <code>get out of</code> sync after a failure, so they must be explicitly resynced when the backup VM is restarted after a failure. That is, FT VMotion must not only sync the running state of the primary and backup VMs, but also their disk state.</p>
+<div class="note info">
+            <p>对于主机和备机的一个替代设计是使用单独(非共享)的虚拟磁盘。在这种设计中，备机将所有的写写到自己的虚拟磁盘，这样做可以自然的保持备机的虚拟磁盘和主机的虚拟磁盘保持同步。图4说明了这种配置。对于非共享磁盘的情况，每个虚拟磁盘本质上被认为是每个虚拟机的内部状态的一部分。因此，主机的磁盘写不用根据输出规则做延迟。在共享存储对于主机和备机不可访问的时候非共享的设计是相当有用的。可能是因为共享存储不可用或太昂贵，或是因为运行主机和备机的服务器相距很远(远距离的容错)。非共享设计的一个缺点是在容错第一次启用的时候，虚拟磁盘的两份拷贝必须显式同步。另外，磁盘可能会在故障发生后脱离同步，所以在故障发生后虚拟机重启的时候，磁盘必须被显式的重新同步。也就是说，容错VMotion必须不光同步主机和备机的运行状态，也要同步磁盘的状态。</p>
+          </div>
+
+<p>In the non-shared-disk configuration, there may be no shared storage to use for dealing with a split-brain situation. In this case, the system could use some other external <code>tiebreaker</code>, such as a third-party server that both servers can talk to. If the servers are part of a cluster with more than two nodes, the system could alternatively use a <code>majority algorithm</code> based on cluster membership. In this case, a VM would only be allowed to go live if it is running on a server that is part of a communicating sub-cluster that contains a majority of the original nodes.</p>
+<div class="note info">
+            <p>在非共享磁盘的配置下，可能没有可用的共享存储对于解决脑裂的情况。在这种情况下，系统可以使用一些其他的外部的”决胜局”,比如主机和备机都可以进行通信的第三方服务器。如果服务器是超过两个节点的集群的一部分，系统可以替代性的使用基于集群成员的多数派算法。在这种情况下，如果虚拟机运行在一个属于包含多数原始节点的通信子集群的一部分的服务器上，将仅仅被允许上线。</p>
+          </div>
+
+<hr>
+<h3 id="4-2-Executing-Disk-Reads-on-the-Backup-VM"><a href="#4-2-Executing-Disk-Reads-on-the-Backup-VM" class="headerlink" title="4.2 Executing Disk Reads on the Backup VM"></a>4.2 Executing Disk Reads on the Backup VM</h3><p>In our default design, the backup VM never reads from its virtual disk (whether shared or non-shared). Since the disk read is considered an input, it is <code>natural</code> to send the results of the disk read to the backup VM via the logging channel.</p>
+<div class="note info">
+            <p>在我们的缺省设计中，备机绝不会从虚拟磁盘(不管共享还是非共享)进行读取.因为磁盘读被认为是一个输入，通过日志通道发送磁盘读的结果给备机是自然的。</p>
+          </div>
+
+<p>An alternate design is to have the backup VM execute disk reads and therefore <code>eliminate</code> the logging of disk read data. This approach can greatly reduce the traffic on the logging channel for workloads that do a lot of disk reads. However, this approach has a number of <code>subtleties</code>. It may slow down the backup VM’s execution, since the backup VM must execute all disk reads and wait if they are not physically completed when it reaches the point in the VM execution where they completed on the primary.</p>
+<div class="note info">
+            <p>一个替代的设计是让备机执行磁盘读，这样可以消除磁盘读的日志。这样可以极大的降低日志通道的流量，在有大量磁盘读的工作负载上。然而，这种方法有很多微妙之处。它可能会减慢备机的执行速度，因为备机必须执行所有的磁盘读，并且在达到主机上执行完成的执行点上等待磁盘读是否在物理上完成</p>
+          </div>
+
+<p>Also, some extra work must be done to deal with failed disk read operations. If a disk read by the primary succeeds but the corresponding disk read by the backup fails, then the disk read by the backup must be retried until it succeeds, since the backup must get the same data in memory that the primary has. <code>Conversely</code>, if a disk read by the primary fails, then the contents of the target memory must be sent to the backup via the logging channel, since the contents of memory will be undetermined and not necessarily replicated by a successful disk read by the backup VM.</p>
+<div class="note info">
+            <p>并且，必须做一些额外的工作来处理失败的磁盘读操作。如果主机的磁盘读成功了但是备机的磁盘读失败了，那么备机的磁盘读必须重试直到成功，因为备机必须在内存中获得和主机一样的数据。反过来，如果主机的磁盘读失败，必须通过日志通道将目的内存的内容发送给备机，因为内存的内容将会是不确定性的，并且备机的成功磁盘读可能是不必要的副本</p>
+          </div>
+
+<p>Finally, there is a <code>subtlety</code> if this disk-read alternative is used with the shared disk configuration. If the primary VM does a read to a particular disk location, followed fairly soon by a write to the same disk location, then the disk write must be delayed until the backup VM has executed the first disk read. This dependence can be detected and handled correctly, but adds extra complexity to the implementation.</p>
+<div class="note info">
+            <p>最后，替代方案的磁盘读和共享磁盘配置一起使用的行为是微妙的。如果主机读取了一个特定的磁盘位置，然后很快又有一个对于相同磁盘位置的写操作，则第二次磁盘写将被延迟到备机已经执行了第一次的磁盘读。这种依赖可以被检测到并进行正确的处理，但是对于实现增加了额外的复杂性。</p>
+          </div>
+
+<p>In Section 5.1, we give some performance results indicating that executing disk reads on the backup can cause some slightly reduced throughput (1-4%) for real applications, but can also reduce the logging bandwidth noticeably. Hence, executing disk reads on the backup VM may be useful in cases where the bandwidth of the logging channel is quite limited.</p>
+<div class="note info">
+            <p>在5.1节，我们提供的一些性能结果表明在备机上执行磁盘读会对应用程序的吞吐有轻微的降低(1-4%),但也会显著降低日志的带宽。因此，对于日志通道带宽受限的情况，在备机执行磁盘读是有用的。</p>
+          </div>
+
+<hr>
+<h2 id="5-Performance-Evaluation"><a href="#5-Performance-Evaluation" class="headerlink" title="5 Performance Evaluation"></a>5 Performance Evaluation</h2><p>In this section, we do a basic evaluation of the performance of VMware FT for a number of application workloads and networking benchmarks. For these results, we run the primary and backup VMs on identical servers, each with eight Intel Xeon 2.8 Ghz CPUs and 8 Gbytes of RAM. The servers are connected via a 10 Gbit/s crossover network, though as will be seen in all cases, much less than 1 Gbit/s of network bandwidth is used. Both servers access their shared virtual disks from an EMC Clariion connected through a standard 4 Gbit/s Fibre Channel network. The client used to drive some of the workloads is connected to the servers<br>via a 1 Gbit/s network.</p>
+<p>The applications that we evaluate in our performance results are as follows. SPECJbb2005 is an industry-standard Java application benchmark that is very CPU- and memory-intensive and does very little IO. Kernel Compile is a workload that runs a compilation of the Linux kernel. This workload does some disk reads and writes, and is very CPU- and MMU-intensive, because of the creation and destruction of many compilation processes. Oracle Swingbench is a workload in which an Oracle 11g database is driven by the Swingbench OLTP (online transaction processing) workload. This workload does substantial disk and networking IO, and has eighty simultaneous database sessions. MS-SQL DVD Store is a workload in which a Microsoft SQL Server 2005 database is driven by the DVD Store benchmark, which has sixteen simultaneous clients.</p>
+<hr>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-20-03_water.jpg"></p>
+<h3 id="5-1-Basic-Performance-Results"><a href="#5-1-Basic-Performance-Results" class="headerlink" title="5.1 Basic Performance Results"></a>5.1 Basic Performance Results</h3><p>Table 1 gives basic performance results. For each of the applications listed, the second column gives the ratio of the performance of the application when FT is enabled on the VM running the server workload vs. the performance when FT is not enabled on the same VM. For SPECJbb2005, Kernel Compile, Oracle Swingbench, and MS-SQL DVD Store, the performance measures are, respectively, business operations per second, compile time in seconds, transactions per second, and operations per second. The ratios are calculated so that a value less than 1 indicates that the FT workload is slower. Clearly, the overhead for enabling FT on these representative workloads is less than 10%. SPECJbb2005 is completely computebound and has no idle time, but performs well because it has minimal non-deterministic events beyond timer interrupts. The other workloads do disk IO and have some idle time, so some of the overhead of deterministic replay and the FT protocol may be hidden by the fact that the FT VMs have less idle time. However, the general conclusion is that VMware FT is able to support fault-tolerant VMs with a reasonable performance overhead.</p>
+<p>In the third column of the table, we give the average bandwidth of data sent on the logging channel when these applications are run. For these applications, the logging bandwidth is quite reasonable and easily satisfied by a 1 Gbit/s network. In fact, the low bandwidth requirements indicate that multiple FT workloads can share the same 1 Gbit/s network without any negative performance effects.</p>
+<p>For VMs that run common guest operating systems like Linux and Windows, we have found that the typical logging bandwidth while the guest OS is idle is 0.5-1.5 Mbits/sec. The “idle” bandwidth is largely the result of recording the delivery of timer interrupts. For a VM with an active workload, the logging bandwidth is dominated by the network and disk inputs that must be sent to the backup – the network packets that are received and the disk blocks that are read from disk. We have found that a useful heuristic for the network bandwidth is:</p>
+<p>  FT logging bandwidth = 1 Mbit/s + 1.2 * (average disk read throughput<br>  [Mbits/s] + average network receives [Mbits/s])</p>
+<p>The factor of 1.2 is a “fudge factor” that approximates the extra logging bandwidth needed for disk and network IOs aside from the input data, including the log entry headers and the extra entries for completion interrupts. Hence, the logging bandwidth can be much higher than those measured in Table 1 for applications that have very high network receive or disk read bandwidth. For these kinds of applications, the bandwidth of the logging channel could be a bottleneck, especially if there are other uses of the logging channel.</p>
+<p>The relatively low bandwidth needed over the logging channel for many real applications makes replay-based fault tolerance quite attractive for a long-distance configuration using non-shared disks. For long-distance configurations where the primary and backup might be separated by 1-100 kilometers, optical fiber can easily support bandwidths of 100-1000 Mbit/s with latencies of less than 10 milliseconds. For the applications in Table 1, a bandwidth of 100-1000 Mbit/s should be sufficient for good performance. Note, however, that the extra round-trip latency between the primary and backup may cause network and disk outputs to be delayed by up to 20 milliseconds. The long-distance configuration will only be appropriate for applications whose clients can tolerate such an additional latency on each request.</p>
+<p>For two applications, we have measured the performance impact of executing disk reads on the backup VM (as described in Section 4.2) vs. sending disk read data over the logging channel. For Oracle Swingbench, throughput is about 4% slower when executing disk reads on the backup VM; for MS-SQL DVD Store, throughput is about 1% slower. Meanwhile, the logging bandwidth is decreased from 12 Mbits/sec to 3 Mbits/sec for Oracle Swingbench, and from 18 Mbits/sec to 8 Mbits/sec for MS-SQL DVD Store. Clearly, the bandwidth savings could be much greater for applications with much greater disk read bandwidth. As mentioned in Section 4.2, it is expected that the performance might be somewhat worse when disk reads are executed on the backup VM. However, for cases where the bandwidth of the logging channel is limited (for example, a long-distance configuration), executing disk reads on the backup VM may be useful.</p>
+<hr>
+<h3 id="5-2-Network-Benchmarks"><a href="#5-2-Network-Benchmarks" class="headerlink" title="5.2 Network Benchmarks"></a>5.2 Network Benchmarks</h3><p>Networking benchmarks can be quite challenging for our system for a number of reasons. First, high-speed networking can have a very high interrupt rate, which requires the logging and replaying of asynchronous events at a very high rate. Second, benchmarks that receive packets at a high rate will cause a high rate of logging traffic, since all such packets must be sent to the backup via the logging channel. Third, benchmarks that send packets will be subject to the Output Rule, which delays the sending of network packets until the appropriate acknowledgment from the backup is received. This delay will increase the measured latency to a client. This delay could also decrease network bandwidth to a client, since network protocols (such as TCP) may have to decrease the network transmission rate as the roundtrip latency increases.</p>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/Snipaste_2021-02-17_23-20-15_water.jpg"></p>
+<p>Table 2 gives our results for a number of measurements made by the standard netperf benchmark. In all these measurements, the client VM and primary VM are connected via a 1 Gbit/s network. The first two rows give send and receive performance when the primary and backup hosts are connected by a 1 Gbit/s network. The third and fourth rows give the send and receive performance when the primary and backup servers are connected by a 10 Gbit/s network, which not only has higher bandwidth, but also lower latency than the 1 Gbit/s network. As a rough measure, the ping time between hypervisors for the 1 Gbit/s connection is about 150 microseconds, while the ping time for a 10 Gbit/s connection is about 90 microseconds.</p>
+<p>When FT is not enabled, the primary VM can achieve close (940 Mbit/s) to the 1 Gbit/s line rate for both transmits and receives. When FT is enabled for receive workloads, the logging bandwidth is very large, since all the incoming network packets must be sent on the logging channel. The logging channel can therefore become a bottleneck, as shown for the results for the 1 Gbit/s logging network. The effect is much less for the 10 Gbit/s logging network. When FT is enabled for transmit workloads, the logging bandwidth is significant since all the network interrupts must still be logged. However, the achievable network transmit bandwidths are higher than the network receive bandwidths. Overall, we see that FT can limit network bandwidths significantly at very high transmit and receive rates, but high absolute rates are still achievable.</p>
+<hr>
+<h2 id="6-Related-Work"><a href="#6-Related-Work" class="headerlink" title="6 Related Work"></a>6 Related Work</h2><p>Bressoud and Schneider [3] described the initial idea of implementing fault tolerance for virtual machines via software contained completely at the hypervisor level. They demonstrated the feasibility of keeping a backup virtual machine in sync with a primary virtual machine via a prototype for servers with HP PA-RISC processors. However, due to limitations of the PA-RISC architecture, they could not implement fully secure, isolated virtual machines. Also, they did not implement any method of failure detection or attempt to address any of the practical issues described in Section 3. More importantly, they imposed a number<br>of constraints on their FT protocol that were unnecessary. First, they imposed a notion of epochs, where asynchronous events are delayed until the end of a set interval. The notion of an epoch is unnecessary – they may have imposed it because they could not replay individual asynchronous events efficiently enough. Second, they required that the primary VM stop execution essentially until the backup has received and acknowledged all previous log entries. However, only the output itself (such as a network packet) must be delayed – the primary VM itself may continue executing.</p>
+<p>Bressoud [4] describes a system that implements fault tolerance in the operating system (Unixware), and therefore provides fault tolerance for all applications that run on that operating system. The system call interface becomes the set of operations that must be replicated deterministically. This work has similar limitations and design choices as the hypervisor-based work.</p>
+<p>Napper [9] and Friedman [7] describe implementations of fault-tolerant Java virtual machines. They follow a similar design to ours and Bressoud’s in sending information about inputs and non-deterministic operations on a logging channel. Like Bressoud, they do not appear to focus on detecting failure and re-establishing fault tolerance after a failure. In addition, their implementation is limited to providing fault tolerance for applications that run in a Java virtual machine. These systems attempt to deal with issues of multi-threaded Java applications, but require either that all data is correctly protected by locks or enforce a serialization on access to shared memory.</p>
+<p>Dunlap [6] describes an implementation of deterministic replay targeted towards debugging application software on a paravirtualized system. Our work supports arbitrary operating systems running inside virtual machines and implements fault tolerance support for these VMs, which requires much higher levels of stability and performance.</p>
+<p>Cully [5] describes an alternative approach for supporting fault-tolerant VMs and its implementation in a project called Remus. With this approach, the state of a primary VM is repeatedly checkpointed during execution and sent to a backup server, which collects the checkpoint information. The checkpoints must be executed very frequently (many times per second), since external outputs must be delayed until a following checkpoint has been sent and acknowledged. The advantage of this approach is that it applies equally well to uni-processor and multi-processor VMs. The main issue is that this approach has very high network bandwidth requirements to send the incremental changes to memory state at each checkpoint. The results for Remus presented in [5] show 100% to 225% slowdown for kernel compile and SPECweb benchmarks, when attempting to do 40 checkpoints per second using a 1 Gbit/s network connection for transmitting changes in memory state. There are a number of optimizations that may be useful in decreasing the required network bandwidth, but it is not clear that reasonable performance can be achieved with a 1 Gbit/s connection. In contrast, our record-replay based approach can achieve less than 10% overhead, typically with on the order of 10-50 Mbit/s bandwidth required between the primary and backup hosts.</p>
+<hr>
+<h2 id="7-Conclusion-and-Future-Work"><a href="#7-Conclusion-and-Future-Work" class="headerlink" title="7 Conclusion and Future Work"></a>7 Conclusion and Future Work</h2><p>We have designed and implemented an efficient and complete system in VMware vSphere that provides fault tolerance (FT) for virtual machines running on servers in a cluster. Our design is based on replicating the execution of a primary VM via a backup VM on another host using VMware deterministic replay. If the server running the primary VM fails, the backup VM takes over immediately with no interruption or loss of data.</p>
+<div class="note info">
+            <p>我们已经在VMware vSphere上设计实现了一个有效的完整的系统，可对运行在服务器集群上的虚拟机提供容错。我们的设计基于，运行在另外主机上通过使用VMware确定性重放功能的备机复制主机的执行。如果运行主机的服务器故障，备机可以立即接管主机，没有中断，也不会丢失数据。</p>
+          </div>
+
+<p><code>Overall</code>, the performance of fault-tolerant VMs under VMware FT on commodity hardware is excellent, and shows less than 10% overhead for some typical applications. Most of performance cost of VMware FT comes from the overhead of using VMware deterministic replay to keep the primary and backup VMs in sync. The low overhead of VMware FT therefore <code>derives from</code> the efficiency of VMware deterministic replay. In addition, the logging bandwidth required to keep the primary and backup in sync is typically quite small, often less than 100 Mbit/s. Because the logging bandwidth is quite small in most cases, it seems <code>feasible</code> to implement configurations where the primary and backup VMs are separated by long distances (1-100 kilometers).</p>
+<div class="note info">
+            <p>总体而言，VMware容错系统在商用硬件上的容错性能是出色的，对于一些典型应用的开销不到10%.多数VMware容错的性能开销来自保持主机备机间同步而使用的VMware确定性重放。VMware容错系统的低开销源自VMware确定性重放的效率。另外，用来保持主机备机间同步的日志带宽通常很小，一般低于100Mbit/s.因为日志带宽在大多数情况下很小，实现主机和备机远距离分布(1-100公里)看起来是可行的。</p>
+          </div>
+
+<p>Our results with VMware FT have shown that an efficient implementation of faulttolerant VMs can be built upon deterministic replay. Such a system can <code>transparently</code> provide fault tolerance for VMs running any operating systems and applications with minimal overhead. However, for a system of fault-tolerant VMs to be useful for customers, it must also be <code>robust</code>, easy-to-use, and highly automated. A usable system requires many other components <code>beyond</code> replicated execution of VMs. In particular, VMware FT automatically restores redundancy after a failure, by finding an appropriate server in the local cluster and creating a new backup VM on that server. By <code>addressing</code> all the necessary issues, we have <code>demonstrated</code> a system that is usable for real applications in customer’s datacenters.</p>
+<div class="note info">
+            <p>我们对VMware容错系统的研究结果表明，通过确定性重放技术能够高效的实现虚拟机容错。这样的系统可以透明的对运行在任何操作系统和应用上的虚拟机提供容错，以最小化开销。然而，对于一个对用户有用的容错虚拟机来说，他还必须是健壮的，易于使用，并且高自动化的。一个可用的系统除了复制虚拟机执行外，还需要很多其他的组件。特别的，VMware容错系统可以在故障后自动恢复冗余，通过在本地集群中寻找合适的服务器然后创建一个新的备机。通过解决所有必要的问题，我们证明了对客户数据中心上实际应用程序可用的系统</p>
+          </div>
+
+<p>In the future, we are interested in <code>investigating</code> the performance <code>characteristics</code> of the long-distance FT configurations mentioned above. We are also interested in extending our system to deal with <code>partial</code> hardware failure. By partial hardware failure, we mean a partial loss of functionality or redundancy in a server that doesn’t cause corruption or loss of data. An example would be the loss of all network connectivity to the VM, or the loss of a redundant<br>power <code>supply</code> in the physical server. If a partial hardware failure occurs on a server running a primary VM, in many cases (but not all) it would be advantageous to fail over to the backup VM immediately. Such a failover could immediately restore full service for a <code>critical</code> VM, and ensure that the VM is quickly <code>moved off</code> of a <code>potentially</code> unreliable server.</p>
+<div class="note info">
+            <p>今后，我们有兴趣调查前面提到的远距离容错配置的性能特征。我们也有兴趣扩展我们的系统来解决部分硬件。所谓的部分硬件故障，说的是服务器中部分功能缺失或冗余，不会导致数据的损坏或丢失。比如虚拟机的所有网络连接的丢失，或者物理服务器中冗余电源的丢失。如果部分硬件故障发生在运行主机的服务器上，在大多数情况(不是所有情况)下对于故障立即转移到备机是有利的。故障转移可以让关键的虚拟机恢复完整服务，并确保虚拟机从潜在不可靠的服务器中快速移出</p>
+          </div>
+
+<hr>
+<h2 id="Acknowledgments"><a href="#Acknowledgments" class="headerlink" title="Acknowledgments"></a>Acknowledgments</h2><p>We would like to thank Krishna Raja, who generated many of the performance results. There were numerous people involved in the implementation of VMware FT. Core implementors of deterministic replay and the base FT functionality included Lan Huang, Eric Lowe, Slava Malyugin, Alex Mirgorodskiy, Boris Weissman, and Min Xu. In addition, there are many other people involved in the higher-level management of FT in VMware vCenter and in implementation issues related to specific virtual devices besides network and disk. Karyn Ritter did an excellent job managing much of the work.</p>
+<hr>
+<h2 id="References"><a href="#References" class="headerlink" title="References"></a>References</h2><p>[1] Alsberg, P., and Day, J. A Principle for Resilient Sharing of Distributed Resources. In Proceedings of the Second International Conference on Software Engineering (1976), pp. 627–644.</p>
+<p>[2] AMD Corporation. AMD64 Architecture Programmer’s Manual. Sunnyvale, CA.</p>
+<p>[3] Bressoud, T., and Schneider, F. Hypervisor-based Fault Tolerance. In Proceedings of SOSP 15 (Dec. 1995).</p>
+<p>[4] Bressoud, T. C. TFT: A Software System for Application-Transparent Fault Tolerance. In Proceedings of the Twenty-Eighth Annual International Symposium on FaultTolerance Computing (June 1998), pp. 128–137.</p>
+<p>[5] Cully, B., Lefebvre, G., Meyer, D., Feeley, M., Hutchison, N., and Warfield, A. Remus: High Availability via Asynchronous Virtual Machine Replication. In Proceedings of the Fifth USENIX Symposium on Networked Systems Design and Implementation (Apr. 2008), pp. 161–174.</p>
+<p>[6] Dunlap, G. W., King, S. T., Cinar, S., Basrai, M., and Chen, P. M. ReVirt: Enabling Intrusion Analysis through Virtual Machine Logging and Replay. In Proceedings of the 2002 Symposium on Operating Systems Design and Implementation (Dec. 2002).</p>
+<p>[7] Friedman, R., and Kama, A. Transparent Fault-Tolerant Java Virtual Machine. In Proceedings of Reliable Distributed System (Oct. 2003), pp. 319–328.</p>
+<p>[8] Intel Corporation. IntelAˆR 64 and IA-32 Architectures Software Developer’s Manuals. Santa Clara, CA.</p>
+<p>[9] Napper, J., Alvisi, L., and Vin, H. A Fault-Tolerant Java Virtual Machine. In Proceedings of the International Conference on Dependable Systems and Networks (June 2002), pp. 425–434.</p>
+<p>[10] Nelson, M., Lim, B.-H., and Hutchins, G. Fast Transparent Migration for Virtual Machines. In Proceedings of the 2005 Annual USENIX Technical Conference (Apr. 2005).</p>
+<p>[11] Nightingale, E. B., Veeraraghavan, K., Chen, P. M., and Flinn, J. Rethink the Sync. In Proceedings of the 2006 Symposium on Operating Systems Design and<br>Implementation (Nov. 2002).</p>
+<p>[12] Schlicting, R., and Schneider, F. B. Fail-stop Processors: An Approach to Designing Fault-tolerant Computing Systems. ACM Computing Surveys 1, 3 (Aug.<br>1983), 222–238.</p>
+<p>[13] Schneider, F. B. Implementing fault-tolerance services using the state machine approach: A tutorial. ACM Computing Surveys 22, 4 (Dec. 1990), 299–319.</p>
+<p>[14] Stratus Technologies. Benefit from Stratus Continuing Processing Technology: Automatic 99.999% Uptime for Microsoft Windows Server Environments. At <a target="_blank" rel="noopener" href="http://www.stratus.com/pdf/whitepapers/continuous-processing-for-windows.pdf">http://www.stratus.com/pdf/whitepapers/continuous-processing-for-windows.pdf</a>, June 2009.</p>
+<p>[15] Xu, M., Malyugin, V., Sheldon, J., Venkitachalam, G., and Weissman, B. ReTrace: Collecting Execution Traces with Virtual Machine Deterministic Replay. In<br>Proceedings of the 2007 Workshop on Modeling, Benchmarking, and Simulation (June 2007).</p>
+<h2 id="原文"><a href="#原文" class="headerlink" title="原文"></a>原文</h2><div class="pdfobject-container" data-target="http://nil.csail.mit.edu/6.824/2017/papers/vm-ft.pdf" data-height="1000px"></div>
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2021-02-12-The-Design-of-a-Practical-System-for-Fault-Tolerant-Virtual-Machines/" title="[译文]The Design of a Practical System for Fault-Tolerant VirtualMachines">https://riverferry.site/2021-02-12-The-Design-of-a-Practical-System-for-Fault-Tolerant-Virtual-Machines/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021-01-26-The-Google-File-System/" rel="prev" title="[译文]The Google File System">
+      <i class="fa fa-chevron-left"></i> [译文]The Google File System
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021-02-20-Paxos-Made-Simple/" rel="next" title="[译文]Paxos Made Simple">
+      [译文]Paxos Made Simple <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Abstract"><span class="nav-number">1.</span> <span class="nav-text">Abstract</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Introduction"><span class="nav-number">2.</span> <span class="nav-text">1 Introduction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Basic-FT-Design"><span class="nav-number">3.</span> <span class="nav-text">2 Basic FT Design</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Record-Replay-Implementation"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 Record-Replay Implementation</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-FT-Protocol"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 FT Protocol</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-Detecting-and-Responding-to-Failure"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 Detecting and Responding to Failure</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-Go-live-Points"><span class="nav-number">3.4.</span> <span class="nav-text">2.4 Go-live Points</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-Practical-Implementation-of-FT"><span class="nav-number">4.</span> <span class="nav-text">3 Practical Implementation of FT</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Starting-and-Restarting-FT-VMs"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 Starting and Restarting FT VMs</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-Managing-the-Logging-Channel"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 Managing the Logging Channel</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-Operation-on-FT-VMs"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 Operation on FT VMs</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-Implementation-Issues-for-Disk-IOs"><span class="nav-number">4.4.</span> <span class="nav-text">3.4 Implementation Issues for Disk IOs</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-Implementation-Issues-for-Network-IO"><span class="nav-number">4.5.</span> <span class="nav-text">3.5 Implementation Issues for Network IO</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-Design-Alternatives"><span class="nav-number">5.</span> <span class="nav-text">4 Design Alternatives</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-Shared-vs-Non-shared-Disk"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 Shared vs. Non-shared Disk</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-Executing-Disk-Reads-on-the-Backup-VM"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 Executing Disk Reads on the Backup VM</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-Performance-Evaluation"><span class="nav-number">6.</span> <span class="nav-text">5 Performance Evaluation</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-Basic-Performance-Results"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 Basic Performance Results</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-Network-Benchmarks"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 Network Benchmarks</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-Related-Work"><span class="nav-number">7.</span> <span class="nav-text">6 Related Work</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-Conclusion-and-Future-Work"><span class="nav-number">8.</span> <span class="nav-text">7 Conclusion and Future Work</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Acknowledgments"><span class="nav-number">9.</span> <span class="nav-text">Acknowledgments</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#References"><span class="nav-number">10.</span> <span class="nav-text">References</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8E%9F%E6%96%87"><span class="nav-number">11.</span> <span class="nav-text">原文</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : '71e45a3c264a21a257b19cd3917825a2',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

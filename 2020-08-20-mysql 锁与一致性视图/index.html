@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="参考MySQL实战45讲 mysql技术内幕">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mysql 锁与一致性视图">
+<meta property="og:url" content="https://riverferry.site/2020-08-20-mysql%20%E9%94%81%E4%B8%8E%E4%B8%80%E8%87%B4%E6%80%A7%E8%A7%86%E5%9B%BE/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="参考MySQL实战45讲 mysql技术内幕">
+<meta property="og:locale">
+<meta property="og:image" content="https://i.loli.net/2020/08/21/kwd8Vps4SLXgC5i.jpg">
+<meta property="og:image" content="https://i.loli.net/2020/08/21/ItPxE9KiQvAl4nC.png">
+<meta property="article:published_time" content="2020-08-20T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.285Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="mysql">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/08/21/kwd8Vps4SLXgC5i.jpg">
+
+<link rel="canonical" href="https://riverferry.site/2020-08-20-mysql%20%E9%94%81%E4%B8%8E%E4%B8%80%E8%87%B4%E6%80%A7%E8%A7%86%E5%9B%BE/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>mysql 锁与一致性视图 | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2020-08-20-mysql%20%E9%94%81%E4%B8%8E%E4%B8%80%E8%87%B4%E6%80%A7%E8%A7%86%E5%9B%BE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          mysql 锁与一致性视图
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-08-20 00:00:00" itemprop="dateCreated datePublished" datetime="2020-08-20T00:00:00+00:00">2020-08-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>5.9k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>5 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="">MySQL实战45讲</a></p>
+<p><a href="">mysql技术内幕</a></p>
+<a id="more"></a>
+
+<h2 id="锁"><a href="#锁" class="headerlink" title="锁"></a>锁</h2><h3 id="lock-latch"><a href="#lock-latch" class="headerlink" title="lock latch"></a>lock latch</h3><p>latch是闩(shuan)锁,就是互斥量，读写锁这种控制临界资源的锁。</p>
+<p>lock说的是数据库中的锁，用于锁定事物，包括表锁，行锁，意向锁。</p>
+<p><img src="https://i.loli.net/2020/08/21/kwd8Vps4SLXgC5i.jpg" alt="2020082101.jpg"></p>
+<h3 id="innodb的锁"><a href="#innodb的锁" class="headerlink" title="innodb的锁"></a>innodb的锁</h3><p>innodb支持行锁，有两种类型：</p>
+<ul>
+<li>S锁，共享锁，允许事物读</li>
+<li>x锁，排他锁，允许事物删除或更新</li>
+</ul>
+<p>兼容性：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">                    X                   S</span><br><span class="line">X                 不兼容                不兼容</span><br><span class="line"></span><br><span class="line">S                 不兼容                兼容</span><br></pre></td></tr></table></figure>
+
+<h3 id="监测锁"><a href="#监测锁" class="headerlink" title="监测锁"></a>监测锁</h3><h4 id="show-processlist"><a href="#show-processlist" class="headerlink" title="show processlist"></a>show processlist</h4><p>查看所有线程</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">MySQL [mysql]&gt; show processlist;</span><br><span class="line">+----+------+-----------+-------+---------+------+-------------+------------------+</span><br><span class="line">| Id | User | Host      | db    | Command | Time | State       | Info             |</span><br><span class="line">+----+------+-----------+-------+---------+------+-------------+------------------+</span><br><span class="line">| <span class="number">16</span> | root | localhost | mysql | Query   |    <span class="number">0</span> | System lock | show processlist |</span><br><span class="line">| <span class="number">17</span> | root | localhost | mysql | Sleep   |   <span class="number">86</span> |             | <span class="literal">NULL</span>             |</span><br><span class="line">| <span class="number">18</span> | root | localhost | mysql | Sleep   |  <span class="number">611</span> |             | <span class="literal">NULL</span>             |</span><br><span class="line">+----+------+-----------+-------+---------+------+-------------+------------------+</span><br></pre></td></tr></table></figure>
+
+<h4 id="information-schema-innodb-trx"><a href="#information-schema-innodb-trx" class="headerlink" title="information_schema.innodb_trx"></a>information_schema.innodb_trx</h4><p>查看运行的事务</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">| INNODB_TRX | CREATE TEMPORARY TABLE `INNODB_TRX` (</span><br><span class="line">  `trx_id` varchar(18) NOT NULL DEFAULT &#x27;&#x27;,</span><br><span class="line">  `trx_state` varchar(13) NOT NULL DEFAULT &#x27;&#x27;,</span><br><span class="line">  `trx_started` datetime NOT NULL DEFAULT &#x27;0000-00-00 00:00:00&#x27;,</span><br><span class="line">  `trx_requested_lock_id` varchar(<span class="number">81</span>) DEFAULT <span class="literal">NULL</span>,</span><br><span class="line">  `trx_wait_started` datetime DEFAULT <span class="literal">NULL</span>,</span><br><span class="line">  `trx_weight` bigint(<span class="number">21</span>) <span class="keyword">unsigned</span> NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_mysql_thread_id` bigint(<span class="number">21</span>) <span class="keyword">unsigned</span> NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_query` varchar(<span class="number">1024</span>) DEFAULT <span class="literal">NULL</span>,</span><br><span class="line">  `trx_operation_state` varchar(<span class="number">64</span>) DEFAULT <span class="literal">NULL</span>,</span><br><span class="line">  `trx_tables_in_use` bigint(<span class="number">21</span>) <span class="keyword">unsigned</span> NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_tables_locked` bigint(<span class="number">21</span>) <span class="keyword">unsigned</span> NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_lock_structs` bigint(<span class="number">21</span>) <span class="keyword">unsigned</span> NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_lock_memory_bytes` bigint(<span class="number">21</span>) <span class="keyword">unsigned</span> NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_rows_locked` bigint(<span class="number">21</span>) <span class="keyword">unsigned</span> NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_rows_modified` bigint(<span class="number">21</span>) <span class="keyword">unsigned</span> NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_concurrency_tickets` bigint(<span class="number">21</span>) <span class="keyword">unsigned</span> NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_isolation_level` varchar(16) NOT NULL DEFAULT &#x27;&#x27;,</span><br><span class="line">  `trx_unique_checks` <span class="keyword">int</span>(<span class="number">1</span>) NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_foreign_key_checks` <span class="keyword">int</span>(<span class="number">1</span>) NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_last_foreign_key_error` varchar(<span class="number">256</span>) DEFAULT <span class="literal">NULL</span>,</span><br><span class="line">  `trx_adaptive_hash_latched` <span class="keyword">int</span>(<span class="number">1</span>) NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_adaptive_hash_timeout` bigint(<span class="number">21</span>) <span class="keyword">unsigned</span> NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_is_read_only` <span class="keyword">int</span>(<span class="number">1</span>) NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span>,</span><br><span class="line">  `trx_autocommit_non_locking` <span class="keyword">int</span>(<span class="number">1</span>) NOT <span class="literal">NULL</span> DEFAULT <span class="string">&#x27;0&#x27;</span></span><br><span class="line">) ENGINE=MEMORY DEFAULT CHARSET=utf8 |</span><br><span class="line"></span><br><span class="line">MySQL [mysql]&gt; select trx_id,trx_state,trx_query from information_schema.innodb_trx;</span><br><span class="line">+-----------------+-----------+-----------+</span><br><span class="line">| trx_id          | trx_state | trx_query |</span><br><span class="line">+-----------------+-----------+-----------+</span><br><span class="line">| <span class="number">421346370501344</span> | RUNNING   | <span class="literal">NULL</span>      |</span><br><span class="line">+-----------------+-----------+-----------+</span><br></pre></td></tr></table></figure>
+
+<h4 id="information-schema-innodb-locks"><a href="#information-schema-innodb-locks" class="headerlink" title="information_schema.innodb_locks"></a>information_schema.innodb_locks</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">MySQL [mysql]&gt; select * from information_schema.innodb_locks;</span><br><span class="line">+--------------+-------------+-----------+-----------+--------------+------------+------------+-----------+----------+-----------+</span><br><span class="line">| lock_id      | lock_trx_id | lock_mode | lock_type | lock_table   | lock_index | lock_space | lock_page | lock_rec | lock_data |</span><br><span class="line">+--------------+-------------+-----------+-----------+--------------+------------+------------+-----------+----------+-----------+</span><br><span class="line">| <span class="number">18651</span>:<span class="number">76</span>:<span class="number">4</span>:<span class="number">5</span> | <span class="number">18651</span>       | X         | RECORD    | `mysql`.`tt` | c          |         <span class="number">76</span> |         <span class="number">4</span> |        <span class="number">5</span> | <span class="number">4</span>         |</span><br><span class="line">| <span class="number">18650</span>:<span class="number">76</span>:<span class="number">4</span>:<span class="number">5</span> | <span class="number">18650</span>       | X         | RECORD    | `mysql`.`tt` | c          |         <span class="number">76</span> |         <span class="number">4</span> |        <span class="number">5</span> | <span class="number">4</span>         |</span><br><span class="line">+--------------+-------------+-----------+-----------+--------------+------------+------------+-----------+----------+-----------+</span><br><span class="line"><span class="number">2</span> rows in <span class="built_in">set</span>, <span class="number">1</span> warning (<span class="number">0.01</span> sec)</span><br></pre></td></tr></table></figure>
+
+<h4 id="information-schema-innodb-lock-waits"><a href="#information-schema-innodb-lock-waits" class="headerlink" title="information_schema.innodb_lock_waits"></a>information_schema.innodb_lock_waits</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">MySQL [mysql]&gt; select * from information_schema.innodb_lock_waits;</span><br><span class="line">+-------------------+-------------------+-----------------+------------------+</span><br><span class="line">| requesting_trx_id | requested_lock_id | blocking_trx_id | blocking_lock_id |</span><br><span class="line">+-------------------+-------------------+-----------------+------------------+</span><br><span class="line">| <span class="number">18651</span>             | <span class="number">18651</span>:<span class="number">76</span>:<span class="number">4</span>:<span class="number">5</span>      | <span class="number">18650</span>           | <span class="number">18650</span>:<span class="number">76</span>:<span class="number">4</span>:<span class="number">5</span>     |</span><br><span class="line">+-------------------+-------------------+-----------------+------------------+</span><br><span class="line"><span class="number">1</span> row in <span class="built_in">set</span>, <span class="number">1</span> warning (<span class="number">0.00</span> sec)</span><br></pre></td></tr></table></figure>
+
+<h2 id="视图"><a href="#视图" class="headerlink" title="视图"></a>视图</h2><h3 id="一致性非锁定读"><a href="#一致性非锁定读" class="headerlink" title="一致性非锁定读"></a>一致性非锁定读</h3><p>一致性非锁定读是innodb根据mvcc的方式来读取数据库中的数据。读取不需要等待对应行上的x锁的释放。读取是按照快照的形式，快照是通过undo日志实现的。</p>
+<p><img src="https://i.loli.net/2020/08/21/ItPxE9KiQvAl4nC.png" alt="2020082102.png"></p>
+<p>图中u1,u2,u3记录的是undo日志，v1,v2,v3,v4是根据undo日志反推出来的结果。trx_id是事务id,是事务系统维护的一个递增的值，可以用来判断版本和事务之间的关系。</p>
+<blockquote>
+<p>在实现上， InnoDB 为每个事务构造了一个数组，用来保存这个事务启动瞬间，当前正在“活跃”的所有事务 ID。“活跃”指的就是，启动了但还没提交。</p>
+</blockquote>
+<p>在隔离级别read committed, repeatable read下，innodb使用一致性非锁定读。两种隔离级别选择快照的时间点是不一样的。</p>
+<ul>
+<li>RC下，在每条语句执行前，记录快照/视图</li>
+<li>RR下，在事物启动后，第一条查询语句执行后(或者start transaction with consistent snapshot),记录快照/视图</li>
+</ul>
+<p>测试下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">MySQL [mysql]&gt; select * from tt;</span><br><span class="line">+----+------+------+-------+------+------+</span><br><span class="line">| id | c    | d    | field | f2   | f3   |</span><br><span class="line">+----+------+------+-------+------+------+</span><br><span class="line">|  <span class="number">1</span> |    <span class="number">1</span> |    <span class="number">1</span> |  <span class="literal">NULL</span> | <span class="literal">NULL</span> | <span class="literal">NULL</span> |</span><br><span class="line">|  <span class="number">2</span> |    <span class="number">2</span> |  <span class="number">200</span> |  <span class="literal">NULL</span> | <span class="literal">NULL</span> | <span class="literal">NULL</span> |</span><br><span class="line">|  <span class="number">3</span> |    <span class="number">3</span> |   <span class="number">30</span> |  <span class="literal">NULL</span> | <span class="literal">NULL</span> | <span class="literal">NULL</span> |</span><br><span class="line">| <span class="number">20</span> |    <span class="number">4</span> |  <span class="number">500</span> |  <span class="literal">NULL</span> | <span class="literal">NULL</span> | <span class="literal">NULL</span> |</span><br><span class="line">+----+------+------+-------+------+------+</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line">        sessionA                        sessionB</span><br><span class="line">start transaction with </span><br><span class="line">consistent snapshot;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">                                        update tt <span class="built_in">set</span> d = <span class="number">0</span> where c = <span class="number">4</span>;</span><br><span class="line"></span><br><span class="line">select * from tt where c = <span class="number">4</span>;</span><br><span class="line"><span class="comment">//d=500 isolation=RR</span></span><br><span class="line"><span class="comment">//d=0   isolation=RC</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//REPEATABLE-READ</span></span><br><span class="line">MySQL [mysql]&gt; select @@tx_isolation;</span><br><span class="line">+-----------------+</span><br><span class="line">| @@tx_isolation  |</span><br><span class="line">+-----------------+</span><br><span class="line">| REPEATABLE-READ |</span><br><span class="line">+-----------------+</span><br><span class="line"><span class="number">1</span> row in <span class="built_in">set</span>, <span class="number">1</span> warning (<span class="number">0.00</span> sec)</span><br><span class="line"></span><br><span class="line">MySQL [mysql]&gt; select * from tt where c = <span class="number">4</span>;</span><br><span class="line">+----+------+------+-------+------+------+</span><br><span class="line">| id | c    | d    | field | f2   | f3   |</span><br><span class="line">+----+------+------+-------+------+------+</span><br><span class="line">| <span class="number">20</span> |    <span class="number">4</span> |  <span class="number">500</span> |  <span class="literal">NULL</span> | <span class="literal">NULL</span> | <span class="literal">NULL</span> |</span><br><span class="line">+----+------+------+-------+------+------+</span><br><span class="line"><span class="number">1</span> <span class="function">row in <span class="title">set</span> <span class="params">(<span class="number">0.00</span> sec)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="comment">//READ-COMMITTED </span></span></span><br><span class="line">MySQL [mysql]&gt; set session transaction isolation level READ COMMITTED;</span><br><span class="line">Query OK, <span class="number">0</span> <span class="function">rows <span class="title">affected</span> <span class="params">(<span class="number">0.00</span> sec)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line">MySQL [mysql]&gt; select @@tx_isolation;</span><br><span class="line">+----------------+</span><br><span class="line">| @@tx_isolation |</span><br><span class="line">+----------------+</span><br><span class="line">| READ-COMMITTED |</span><br><span class="line">+----------------+</span><br><span class="line"><span class="number">1</span> row in <span class="built_in">set</span>, <span class="number">1</span> warning (<span class="number">0.00</span> sec)</span><br><span class="line"></span><br><span class="line">MySQL [mysql]&gt; begin;</span><br><span class="line">Query OK, <span class="number">0</span> <span class="function">rows <span class="title">affected</span> <span class="params">(<span class="number">0.00</span> sec)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="comment">//sessionB MySQL [mysql]&gt; update tt set d = 20 where c = 4;</span></span></span><br><span class="line">MySQL [mysql]&gt; select * from tt where c = 4;</span><br><span class="line">+----+------+------+-------+------+------+</span><br><span class="line">| id | c    | d    | field | f2   | f3   |</span><br><span class="line">+----+------+------+-------+------+------+</span><br><span class="line">| <span class="number">20</span> |    <span class="number">4</span> |   <span class="number">20</span> |  <span class="literal">NULL</span> | <span class="literal">NULL</span> | <span class="literal">NULL</span> |</span><br><span class="line">+----+------+------+-------+------+------+</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="一致性锁定读"><a href="#一致性锁定读" class="headerlink" title="一致性锁定读"></a>一致性锁定读</h3><p>一致性非锁定读基于mvcc，利用快照去找对应版本的行记录，不需要等待x锁的释放。而一致性锁定读需要加锁，来取最新版本的数据。有两种形式：</p>
+<ul>
+<li>select … for update</li>
+<li>select … lock in share mode</li>
+</ul>
+<h3 id="两阶段锁"><a href="#两阶段锁" class="headerlink" title="两阶段锁"></a>两阶段锁</h3><blockquote>
+<p>两阶段锁（two-phase locking，2PL）是数据库事务处理时的并发控制方法，以保证可串行化。[1][2]</p>
+</blockquote>
+<p>这种方法使用数据库锁在两个阶段：</p>
+<ul>
+<li>扩张阶段：不断上锁，没有锁被释放</li>
+<li>收缩阶段：锁被陆续释放，没有新的加锁</li>
+</ul>
+<p>2PL可能会导致死锁。</p>
+<p>证明如下，太麻烦了，贴个链接不看了</p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/gatsby123/p/10800089.html">CMU-15445 LAB3:事务隔离，two-phase locking，锁管理器</a></p>
+<h3 id="gap-lock"><a href="#gap-lock" class="headerlink" title="gap lock"></a>gap lock</h3><p>放在幻读的文章总结了。</p>
+<h2 id="ending"><a href="#ending" class="headerlink" title="ending"></a>ending</h2>
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2020-08-20-mysql%20%E9%94%81%E4%B8%8E%E4%B8%80%E8%87%B4%E6%80%A7%E8%A7%86%E5%9B%BE/" title="mysql 锁与一致性视图">https://riverferry.site/2020-08-20-mysql 锁与一致性视图/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/mysql/" rel="tag"><i class="fa fa-tags"></i> mysql</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020-08-20-mysql%20%E8%87%AA%E5%A2%9E%E4%B8%BB%E9%94%AE/" rel="prev" title="mysql 自增主键">
+      <i class="fa fa-chevron-left"></i> mysql 自增主键
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020-08-20-mysql%20slow%20log/" rel="next" title="mysql slow log">
+      mysql slow log <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">参考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%94%81"><span class="nav-number">2.</span> <span class="nav-text">锁</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#lock-latch"><span class="nav-number">2.1.</span> <span class="nav-text">lock latch</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#innodb%E7%9A%84%E9%94%81"><span class="nav-number">2.2.</span> <span class="nav-text">innodb的锁</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%91%E6%B5%8B%E9%94%81"><span class="nav-number">2.3.</span> <span class="nav-text">监测锁</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#show-processlist"><span class="nav-number">2.3.1.</span> <span class="nav-text">show processlist</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#information-schema-innodb-trx"><span class="nav-number">2.3.2.</span> <span class="nav-text">information_schema.innodb_trx</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#information-schema-innodb-locks"><span class="nav-number">2.3.3.</span> <span class="nav-text">information_schema.innodb_locks</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#information-schema-innodb-lock-waits"><span class="nav-number">2.3.4.</span> <span class="nav-text">information_schema.innodb_lock_waits</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%86%E5%9B%BE"><span class="nav-number">3.</span> <span class="nav-text">视图</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E8%87%B4%E6%80%A7%E9%9D%9E%E9%94%81%E5%AE%9A%E8%AF%BB"><span class="nav-number">3.1.</span> <span class="nav-text">一致性非锁定读</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E8%87%B4%E6%80%A7%E9%94%81%E5%AE%9A%E8%AF%BB"><span class="nav-number">3.2.</span> <span class="nav-text">一致性锁定读</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%A4%E9%98%B6%E6%AE%B5%E9%94%81"><span class="nav-number">3.3.</span> <span class="nav-text">两阶段锁</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#gap-lock"><span class="nav-number">3.4.</span> <span class="nav-text">gap lock</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ending"><span class="nav-number">4.</span> <span class="nav-text">ending</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : 'e83b0c0102b1d93bb4477563d7560d56',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

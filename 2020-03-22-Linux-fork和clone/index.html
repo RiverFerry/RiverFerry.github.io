@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="参考Linux fork那些隐藏的开销 Unix&#x2F;Linux fork后传-clone Unix&#x2F;Linux fork&#x2F;exec的前世今生 朴素的UNIX之-进程&#x2F;线程模型 线程库中的创建线程和退出线程 Linux中fork，vfork和clone详解（区别与联系）">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux-fork和clone">
+<meta property="og:url" content="https://riverferry.site/2020-03-22-Linux-fork%E5%92%8Cclone/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="参考Linux fork那些隐藏的开销 Unix&#x2F;Linux fork后传-clone Unix&#x2F;Linux fork&#x2F;exec的前世今生 朴素的UNIX之-进程&#x2F;线程模型 线程库中的创建线程和退出线程 Linux中fork，vfork和clone详解（区别与联系）">
+<meta property="og:locale">
+<meta property="og:image" content="https://i.loli.net/2020/03/22/OaE1UPulbAFpT8X.png">
+<meta property="og:image" content="https://i.loli.net/2020/03/23/XJi8eb1A2PgZSoB.jpg">
+<meta property="og:image" content="https://i.loli.net/2020/03/01/kfEQXRquNtzlTw6.jpg">
+<meta property="og:image" content="https://i.loli.net/2020/03/22/HBbD4hG2JdO57AU.jpg">
+<meta property="article:published_time" content="2020-03-22T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.278Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="linux">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/03/22/OaE1UPulbAFpT8X.png">
+
+<link rel="canonical" href="https://riverferry.site/2020-03-22-Linux-fork%E5%92%8Cclone/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>Linux-fork和clone | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2020-03-22-Linux-fork%E5%92%8Cclone/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux-fork和clone
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-03-22 00:00:00" itemprop="dateCreated datePublished" datetime="2020-03-22T00:00:00+00:00">2020-03-22</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>5.3k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>5 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/WzIZbqgahFakPozdeLGRtg">Linux fork那些隐藏的开销</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/dog250/article/details/100560290">Unix/Linux fork后传-clone</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/dog250/article/details/100538009">Unix/Linux fork/exec的前世今生</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/dog250/article/details/40208219">朴素的UNIX之-进程/线程模型</a></p>
+<p><a target="_blank" rel="noopener" href="https://root1iu.github.io/2019/02/02/athread%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E9%80%80%E5%87%BA%EF%BC%88%E4%B8%80%EF%BC%89/">线程库中的创建线程和退出线程</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/gatieme/article/details/51417488">Linux中fork，vfork和clone详解（区别与联系）</a></p>
+<hr>
+<a id="more"></a>
+
+<h2 id="正文"><a href="#正文" class="headerlink" title="正文"></a>正文</h2><h3 id="fork"><a href="#fork" class="headerlink" title="fork()"></a>fork()</h3><p><a target="_blank" rel="noopener" href="http://man7.org/linux/man-pages/man2/fork.2.html">man-pages</a></p>
+<pre><code>   #include &lt;sys/types.h&gt;
+   #include &lt;unistd.h&gt;
+
+   pid_t fork(void);</code></pre>
+<blockquote>
+<p>fork() creates a new process by duplicating(复制) the calling process.  The new process is referred to as the child process.  The calling process is referred to as the parent process.</p>
+</blockquote>
+<p><strong>图片来源：</strong> <a target="_blank" rel="noopener" href="https://blog.csdn.net/dog250/article/details/100538009">链接</a></p>
+<p><img src="https://i.loli.net/2020/03/22/OaE1UPulbAFpT8X.png" alt="fork.png"></p>
+<h3 id="fork的开销"><a href="#fork的开销" class="headerlink" title="fork的开销"></a>fork的开销</h3><ul>
+<li>写时复制导致的内存开销</li>
+<li>页目录和页表</li>
+<li>vm_area_struct对象</li>
+<li>死锁问题</li>
+</ul>
+<h3 id="写时复制导致的内存开销"><a href="#写时复制导致的内存开销" class="headerlink" title="写时复制导致的内存开销"></a>写时复制导致的内存开销</h3><p>fork后exec前,父进程修改常驻内存中的值,因为写时复制的原因,子进程会讲这些在内存中建立一个新的副本.(如果父进程不修改这些值,写时复制下,就没有这样的开销).可以使用vfork避免(子进程和父进程公用地址空间,子进程先于父进程执行,直到子进程exit/exec后父进程执行)</p>
+<h3 id="页目录和页表"><a href="#页目录和页表" class="headerlink" title="页目录和页表"></a>页目录和页表</h3><p>fork后,在子进程exec执行前(刷新新的页目录，页表)，子进程会把父进程的页目录与页表进行复制，占用了内存，浪费了时间。具体参考<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/WzIZbqgahFakPozdeLGRtg">Linux fork那些隐藏的开销</a></p>
+<h3 id="vm-area-struct对象"><a href="#vm-area-struct对象" class="headerlink" title="vm_area_struct对象"></a>vm_area_struct对象</h3><p>fork后子进程也会复制父进程的vm_area_struct对象，如果父进程malloc/mmap很多，并且vm_area_struct对象都已经实际生成，则又造成大量的浪费。(exec前)具体参考<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/WzIZbqgahFakPozdeLGRtg">Linux fork那些隐藏的开销</a></p>
+<h3 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h3><p>具体参考<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/WzIZbqgahFakPozdeLGRtg">Linux fork那些隐藏的开销</a></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;pthread.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">pthread_mutex_t</span> mutex;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> *<span class="title">mmap_unmap</span><span class="params">(<span class="keyword">void</span> *arg)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">		<span class="built_in">pthread_mutex_lock</span>(&amp;mutex);</span><br><span class="line">		<span class="built_in">sleep</span> (<span class="number">4</span>);</span><br><span class="line">		<span class="built_in">pthread_mutex_unlock</span>(&amp;mutex);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">pthread_t</span> tid;</span><br><span class="line"></span><br><span class="line">	<span class="built_in">pthread_mutex_init</span>(&amp;mutex,<span class="literal">NULL</span>);</span><br><span class="line">	<span class="built_in">pthread_create</span>(&amp;tid, <span class="literal">NULL</span>, mmap_unmap, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line">	<span class="built_in">sleep</span>(<span class="number">1</span>);</span><br><span class="line">	<span class="keyword">if</span> (fork() == <span class="number">0</span>) &#123;</span><br><span class="line">		<span class="built_in">pthread_mutex_lock</span>(&amp;mutex);</span><br><span class="line">		<span class="built_in">pthread_mutex_unlock</span>(&amp;mutex);</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;未死锁!\n\n&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="built_in">sleep</span>(<span class="number">1000</span>);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<pre><code>//父进程        103420
+//父进程线程    103421
+//子进程        103423
+a.out(103420)─┬─a.out(103423)
+          └─&#123;a.out&#125;(103421)
+
+Thread 2 (Thread 0x7f3e22f18700 (LWP 103421)):
+#0  0x00007f3e22fd648d in nanosleep () from /lib64/libc.so.6
+#1  0x00007f3e22fd6324 in sleep () from /lib64/libc.so.6
+#2  0x0000000000400820 in mmap_unmap(void*) ()
+#3  0x00007f3e23b00df5 in start_thread () from /lib64/libpthread.so.0
+#4  0x00007f3e2300f1ad in clone () from /lib64/libc.so.6
+Thread 1 (Thread 0x7f3e23f1c740 (LWP 103420)):
+#0  0x00007f3e22fd648d in nanosleep () from /lib64/libc.so.6
+#1  0x00007f3e22fd6324 in sleep () from /lib64/libc.so.6
+#2  0x00000000004008a5 in main ()
+
+//103423
+#0  0x00007f3e23b06f7d in __lll_lock_wait () from /lib64/libpthread.so.0
+#1  0x00007f3e23b02d32 in _L_lock_791 () from /lib64/libpthread.so.0
+#2  0x00007f3e23b02c38 in pthread_mutex_lock () from /lib64/libpthread.so.0
+#3  0x0000000000400887 in main ()</code></pre>
+<p><strong>子进程在持有锁的情况下，再次lock,导致死锁</strong>   </p>
+<pre><code>(gdb) p mutex
+$1 = 2
+(gdb) call pthread_mutex_unlock(&amp;mutex)
+$2 = 0
+(gdb) p mutex
+$3 = 0</code></pre>
+<h2 id="clone"><a href="#clone" class="headerlink" title="clone"></a>clone</h2><p><a target="_blank" rel="noopener" href="http://man7.org/linux/man-pages/man2/clone.2.html">man page</a></p>
+<pre><code>#define _GNU_SOURCE
+#include &lt;sched.h&gt;
+
+ int clone(int (*fn)(void *), void *stack, int flags, void *arg, ...
+             /* pid_t *parent_tid, void *tls, pid_t *child_tid */ );
+
+/* For the prototype of the raw clone() system call, see NOTES */</code></pre>
+<p><code>flags mask</code></p>
+<table>
+    <thead align="center">
+        <tr>
+            <th style="text-align:center">mask</th>
+            <th style="text-align:center">description</th>
+        </tr>
+    </thead>
+    <tbody align="center">
+        <tr>
+            <td>CLONE_FILES</td>
+            <td>共享文件描述符</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>CLONE_PID</td>
+            <td>父子进程pid相同</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>CLONE_PTRACE</td>
+            <td>若父进程被trace，子进程也被trace</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>CLONE_THREAD</td>
+            <td>支持POSIX线程标准，子进程与父进程共享相同的线程群(内核级线程)</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>CLONE_SIGHAND</td>
+            <td>共享信号表</td>
+        </tr>
+    </tbody>
+    <tbody align="center">
+        <tr>
+            <td>CLONE_VFORK</td>
+            <td>子进程先于父进程执行,类似vfrok</td>
+        </tr>
+    </tbody>
+    <tbody align="CLONE_VM">
+        <tr>
+            <td>CLONE_FILES</td>
+            <td>公用虚拟空间,mm_struct引用加一,不需要再复制一份vm_are_struct</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>与fork（2）相比，这些系统调用可以更精确地控制在       调用进程和子进程之间共享哪些执行上下文。例如，使用这些系统调用，调用者可以控制两个进程是否共享虚拟地址空间，文件描述符表和信号处理程序表。这些系统调用还允许将新的子进程放置在单独的namespaces（7）中。</p>
+<h3 id="CLONE-SIGHAND"><a href="#CLONE-SIGHAND" class="headerlink" title="CLONE_SIGHAND"></a>CLONE_SIGHAND</h3><p><strong>这里拷贝自:</strong><a target="_blank" rel="noopener" href="https://root1iu.github.io/2019/02/02/athread%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E9%80%80%E5%87%BA%EF%BC%88%E4%B8%80%EF%BC%89/">线程库中的创建线程和退出线程</a></p>
+<p>如果CLONE_SIGHAND被设置，调用进程和子进程共享信号处理器表。如果某个进程修改了信号的行为(通过sigaction(2))，会影响到另外的一个进程。但调用进程和子进程仍然拥有独立的信号掩码和信号处理集。所以他们可以使用sigprocmask(2)来阻塞和释放信号而不影响另外一个。</p>
+<p>如果CLONE_SIGHAND没有被设置，子进程只会继承调用进程的信号处理函数副本，两个进程修改信号的行为不会影响另一个进程。</p>
+<p>从Linux2.6.0开始，如果CLONE_SIGHAND被设置了，那么CLONE_VM也需要被设置。</p>
+<h3 id="CLONE-VM"><a href="#CLONE-VM" class="headerlink" title="CLONE_VM"></a>CLONE_VM</h3><p><strong>这里拷贝自:</strong><a target="_blank" rel="noopener" href="https://root1iu.github.io/2019/02/02/athread%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E9%80%80%E5%87%BA%EF%BC%88%E4%B8%80%EF%BC%89/">线程库中的创建线程和退出线程</a></p>
+<p>如果CLONE_VM被设置了，那么调用进程和子进程共享内存空间。特别的，两个进程的内存写操作对另一个进程是透明的。更进一步，任何内存映射和释放映射都会影响另一个进程。</p>
+<p>如果CLONE_VM没有被设置，那么子进程和调用进程运行在不同的内存空间中，即不共享内存空间。对进程中的内存操作不会影响另外一个进程。</p>
+<h3 id="CLONE-THREAD"><a href="#CLONE-THREAD" class="headerlink" title="CLONE_THREAD"></a>CLONE_THREAD</h3><p><strong>这里拷贝自:</strong><a target="_blank" rel="noopener" href="https://root1iu.github.io/2019/02/02/athread%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E9%80%80%E5%87%BA%EF%BC%88%E4%B8%80%EF%BC%89/">线程库中的创建线程和退出线程</a></p>
+<p>CLONE_THREAD如果被设置，那么这个clone出来的子进程会和调用clone的进程进一个线程组，这里的”线程”指的是线程组里的进程</p>
+<p>线程组是Linux 2.4版本加入的，用来支持POSIX thread的一个概念，即一个线程组共享一个PID。在内部，这个共享PID被叫做线程组ID，即TGID。从Linux 2.4开始，getpid(2)会返回调用者的TGID。</p>
+<p>如果clone(2)没有指定CLONE_THREAD，那么新线程将会自己一个作为一个新的线程组，其中，TGID = TID。这个线程是新线程的头儿。</p>
+<p>带CLONE_THREAD新建的线程和clone(2)的调用者有着一样的父进程。表现为getppid(2)返回相同的值。当一个CLONE_THREAD线程终止时，创建它的线程不会发送SIGCHLD信号以及其他终止信号；终止线程的状态也不会被wait(2)捕捉。(线程称为分离的)。只有当线程组中的线程都终止时，父进程会收到SIGCHLD信号。</p>
+<p>如果线程组中的线程执行了execve(2)，那么除了线程头外的所有线程会终止，并且这个execve执行的新程序会在线程组头执行。</p>
+<p>如果线程组中的一个线程使用fork(2)，那么线程组中的所有线程能够wait(2)这个子进程。</p>
+<p>从Linux2.5.35开始，如果CLONE_THREAD被设置，那么CLONE_SIGHAND也需要被设置。需要注意的是，从Linux 2.6.0开始，CLONE_VM也需要跟着CLONE_SIGHAND一起被设置。</p>
+<p>使用kill(2)来向线程组所有线程发送信号，使用tgkill()来向特定的线程发送信号。</p>
+<p>信号的处理和行为是进程范围的，比如一个未处理的信号发送给一个线程，那么这个信号会影响到线程组中的所有线程。</p>
+<h3 id="代码分析"><a href="#代码分析" class="headerlink" title="代码分析"></a>代码分析</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;pthread.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">pthread_mutex_t</span> mutex;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> *<span class="title">mmap_unmap</span><span class="params">(<span class="keyword">void</span> *arg)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;hello!\n&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">pthread_t</span> tid;</span><br><span class="line"></span><br><span class="line">	<span class="built_in">pthread_create</span>(&amp;tid, <span class="literal">NULL</span>, mmap_unmap, <span class="literal">NULL</span>);</span><br><span class="line">	<span class="built_in">sleep</span>(<span class="number">10</span>);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>关键的系统调用:</p>
+<blockquote>
+<p>clone(child_stack=0x7fccd9a28fb0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0x7fccd9a299d0, tls=0x7fccd9a29700, child_tidptr=0x7fccd9a299d0) = 109622</p>
+</blockquote>
+<pre><code>[pid 109622] exit(0)
+
+exit_group(0)                           = ?</code></pre>
+<p>CLONE_THREAD会将新的”进程”和调用进程加入一个相同的线程组,TGID.线程组的头线程推出调用exit_group,其他线程推出调用exit.再结合CLONE_VM就是常见的线程的实现(内核级线程)</p>
+<p><strong>图片来自:</strong><a target="_blank" rel="noopener" href="https://blog.csdn.net/dog250/article/details/100560290">Unix/Linux fork后传-clone</a></p>
+<p><img src="https://i.loli.net/2020/03/23/XJi8eb1A2PgZSoB.jpg" alt="TGID_lit.jpg"></p>
+<h3 id="linux内核级线程"><a href="#linux内核级线程" class="headerlink" title="linux内核级线程"></a>linux内核级线程</h3><p><code>内核级线程：</code> <br></p>
+<blockquote>
+<p>内核级线程又称为内核支持的线程</p>
+</blockquote>
+<ul>
+<li>内核管理所有线程管理，并向应用程序提供API接口</li>
+<li>内核维护进程和线程的上下文</li>
+<li>线程的切换需要内核支持</li>
+<li>以线程为基础进行调度</li>
+<li>例子：Windows</li>
+</ul>
+<p>图片来源: <a target="_blank" rel="noopener" href="https://blog.csdn.net/gatieme/article/details/51892437">https://blog.csdn.net/gatieme/article/details/51892437</a></p>
+<p><img src="https://i.loli.net/2020/03/01/kfEQXRquNtzlTw6.jpg" alt="20200301_内核级线程.jpeg"></p>
+<p>linux下,进程线程都是task_struct,通过CLONE_THREAD,新的进程和调用者进程的TGID是一样的,都是线程组头线程的PID.从Linux 2.4开始，getpid(2)会返回调用者的TGID。所以看到的表象就是线程组内的进程都是一个进程ID,通过CLONE_VM,这些线程组内的进程还可以公用虚拟空间,没有地址隔离,和进程的概念完全区别了.最后,exit只推出当前的task_struct,而exit_group退出线程组内所有线程的task_struct.</p>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>本文参考了大量文章,有的地方也还不是特别清楚,没有亲自去验证,去看底层实现.只能站在别人的肩膀上瞧瞧了.</p>
+<hr>
+<h2 id="ending"><a href="#ending" class="headerlink" title="ending"></a>ending</h2><p><img src="https://i.loli.net/2020/03/22/HBbD4hG2JdO57AU.jpg" alt="76922689_p0_master1200.jpg"></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2020-03-22-Linux-fork%E5%92%8Cclone/" title="Linux-fork和clone">https://riverferry.site/2020-03-22-Linux-fork和clone/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/linux/" rel="tag"><i class="fa fa-tags"></i> linux</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020-03-21-c++11%E5%9B%9B%E7%A7%8Dcast%E8%BD%AC%E6%8D%A2/" rel="prev" title="c++11四种cast转换">
+      <i class="fa fa-chevron-left"></i> c++11四种cast转换
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020-03-23-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E8%99%9A%E6%8B%9F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/" rel="next" title="操作系统-虚拟存储系统">
+      操作系统-虚拟存储系统 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">参考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AD%A3%E6%96%87"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#fork"><span class="nav-number">2.1.</span> <span class="nav-text">fork()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fork%E7%9A%84%E5%BC%80%E9%94%80"><span class="nav-number">2.2.</span> <span class="nav-text">fork的开销</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%99%E6%97%B6%E5%A4%8D%E5%88%B6%E5%AF%BC%E8%87%B4%E7%9A%84%E5%86%85%E5%AD%98%E5%BC%80%E9%94%80"><span class="nav-number">2.3.</span> <span class="nav-text">写时复制导致的内存开销</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A1%B5%E7%9B%AE%E5%BD%95%E5%92%8C%E9%A1%B5%E8%A1%A8"><span class="nav-number">2.4.</span> <span class="nav-text">页目录和页表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#vm-area-struct%E5%AF%B9%E8%B1%A1"><span class="nav-number">2.5.</span> <span class="nav-text">vm_area_struct对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%AD%BB%E9%94%81"><span class="nav-number">2.6.</span> <span class="nav-text">死锁</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#clone"><span class="nav-number">3.</span> <span class="nav-text">clone</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#CLONE-SIGHAND"><span class="nav-number">3.1.</span> <span class="nav-text">CLONE_SIGHAND</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CLONE-VM"><span class="nav-number">3.2.</span> <span class="nav-text">CLONE_VM</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CLONE-THREAD"><span class="nav-number">3.3.</span> <span class="nav-text">CLONE_THREAD</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90"><span class="nav-number">3.4.</span> <span class="nav-text">代码分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#linux%E5%86%85%E6%A0%B8%E7%BA%A7%E7%BA%BF%E7%A8%8B"><span class="nav-number">3.5.</span> <span class="nav-text">linux内核级线程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E8%AF%AD"><span class="nav-number">4.</span> <span class="nav-text">结语</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ending"><span class="nav-number">5.</span> <span class="nav-text">ending</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : 'f5f193e4c1c9795ce698c6f13f0e3d86',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

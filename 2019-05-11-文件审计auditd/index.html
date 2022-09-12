@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="目录 前言 audit简介 auditd工具 auditd使用方法 auditctl autrace ausearch aureport 配置文件 日志文件 实践">
+<meta property="og:type" content="article">
+<meta property="og:title" content="文件审计-auditd">
+<meta property="og:url" content="https://riverferry.site/2019-05-11-%E6%96%87%E4%BB%B6%E5%AE%A1%E8%AE%A1auditd/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="目录 前言 audit简介 auditd工具 auditd使用方法 auditctl autrace ausearch aureport 配置文件 日志文件 实践">
+<meta property="og:locale">
+<meta property="og:image" content="https://i.loli.net/2019/05/12/5cd6f1d545f81.png">
+<meta property="og:image" content="https://i.loli.net/2019/05/12/5cd6fd5e0e6c3.png">
+<meta property="og:image" content="https://i.loli.net/2019/05/12/5cd6fd5e19f06.png">
+<meta property="article:published_time" content="2019-05-11T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.272Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="运维">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2019/05/12/5cd6f1d545f81.png">
+
+<link rel="canonical" href="https://riverferry.site/2019-05-11-%E6%96%87%E4%BB%B6%E5%AE%A1%E8%AE%A1auditd/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>文件审计-auditd | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2019-05-11-%E6%96%87%E4%BB%B6%E5%AE%A1%E8%AE%A1auditd/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          文件审计-auditd
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2019-05-11 00:00:00" itemprop="dateCreated datePublished" datetime="2019-05-11T00:00:00+00:00">2019-05-11</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>9.8k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>9 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h2><ul>
+<li><a href="#%E5%89%8D%E8%A8%80">前言</a></li>
+<li><a href="#audit%E7%AE%80%E4%BB%8B">audit简介</a></li>
+<li><a href="#auditd%E5%B7%A5%E5%85%B7">auditd工具</a></li>
+<li><a href="#auditd%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95">auditd使用方法</a></li>
+<li><a href="#auditctl">auditctl</a></li>
+<li><a href="#autrace">autrace</a></li>
+<li><a href="#ausearch">ausearch</a></li>
+<li><a href="#aureport">aureport</a></li>
+<li><a href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6">配置文件</a></li>
+<li><a href="#%E6%97%A5%E5%BF%97%E6%96%87%E4%BB%B6">日志文件</a></li>
+<li><a href="#%E5%AE%9E%E8%B7%B5">实践</a></li>
+</ul>
+<a id="more"></a>
+
+<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><blockquote>
+<p>文件系统是计算机信息系统中至关重要的资源，而文件监控正是监控系统安全状态，保证计算机系统安全的关键技术。在Linux系统中，诸如 /etc/passwd, /usr/local/sbin 的文件和目录尤为关键。任何对这些文件的破坏和篡改都会引起严重的安全问题。甚至造成系统瘫痪，因此我们有必要使用一种好的策略和工具来对文件系统进行保护。</p>
+</blockquote>
+<h2 id="audit简介"><a href="#audit简介" class="headerlink" title="audit简介"></a>audit简介</h2><blockquote>
+<p>audit是linux系统中用于记录用户底层调用情况的系统，如记录用户执行的open、exit等系统调用。并会将记录写到日志文件中。在内核里有内核审计模块，核外有核外的审计后台进程auditd。应用进程给内核发送审计消息，内核的审计模块再把消息转发给用户空间的后台进程auditd处理</p>
+</blockquote>
+<h2 id="auditd工具"><a href="#auditd工具" class="headerlink" title="auditd工具"></a>auditd工具</h2><blockquote>
+<p>auditd是audit系统的用户空间程序.主要作用是将audit记录信息写到磁盘上<br>auditd在大多数linux系统中默认安装的,如果没有的话网上搜索下安装也比较简单</p>
+</blockquote>
+<pre><code>auditd在启动时会读取2个配置文件:
+/etc/audit/auditd.conf   audit配置文件
+/etc/audit/audit.rules   audit规则文件</code></pre>
+<h2 id="auditd使用方法"><a href="#auditd使用方法" class="headerlink" title="auditd使用方法"></a>auditd使用方法</h2><ul>
+<li>auditd [ -f ]    <br></li>
+</ul>
+<blockquote>
+<p>选项-f表示让auditctl在前台运行，以方便调试，消息可以直接输出到stderr，而不是输出到log系统 <br></p>
+</blockquote>
+<h2 id="auditctl"><a href="#auditctl" class="headerlink" title="auditctl"></a>auditctl</h2><blockquote>
+<p>工具auditctl控制行为、得到状态、从内核审计系统增加或删除规则 <br></p>
+</blockquote>
+<table>
+    <thead>
+        <tr>
+            <th style="text-align:center">选项名</th>
+            <th style="text-align:center">选项的值</th>
+            <th style="text-align:center">说明</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>-b</td>
+            <td></td>
+            <td>设置内核允许的缓冲区数，默认值为64</td>
+        </tr>
+        <tr>
+            <td>-e [0|1]</td>
+            <td></td>
+            <td>关闭或启动内核审计系统</td>
+        </tr>
+        <tr>
+            <td>-f [0..2]</td>
+            <td></td>
+            <td>设置失败标识0=silent 1=printk 2=panic，默认值为1。设置内核如何处理临界错误，如：backlog限制超出、内存错误等</td>
+        </tr>
+        <tr>
+            <td>-h</td>
+            <td></td>
+            <td>帮助信息</td>
+        </tr>
+        <tr>
+            <td>-i</td>
+            <td></td>
+            <td>当从文件中读取规则时忽略错误</td>
+        </tr>
+        <tr>
+            <td>-l</td>
+            <td></td>
+            <td>列出所有的规则，每行一条规则</td>
+        </tr>
+        <tr>
+            <td>-k [key]</td>
+            <td></td>
+            <td>设置审计规则上的过滤关键词key，key是不超过32字节长的任意字符串，它能唯一鉴别由watch产生的审计记录</td>
+        </tr>
+        <tr>
+            <td>-m text</td>
+            <td></td>
+            <td>仅由root用户发送用户空间消息到审计系统。为文件系统watch设置许可过滤器。r=read，w=write，x=execute，a=attribute change。这些许可不是文件的标准许可，而是系统调用使用的，read和write系统调用将忽略这种设置，否则它们将淹没log</td>
+        </tr>
+        <tr>
+            <td>-r [rate]</td>
+            <td></td>
+            <td>设置每秒传输的消息数限制，默认值为0，表示无限制</td>
+        </tr>
+        <tr>
+            <td>-R [file]</td>
+            <td></td>
+            <td>从file文件中读取规则</td>
+        </tr>
+        <tr>
+            <td>-s</td>
+            <td></td>
+            <td>报告状态</td>
+        </tr>
+        <tr>
+            <td>-a [l,a]</td>
+            <td></td>
+            <td>追加规则到l链表，a表示规则的动作</td>
+        </tr>
+        <tr>
+            <td>有效链表名l</td>
+            <td>task</td>
+            <td>追加规则到每个任务链表AUDIT_FILTER_TASK 。域应用任务创建时的uid、gid等</td>
+        </tr>
+        <tr>
+            <td>有效链表名l</td>
+            <td>entry</td>
+            <td>追加规则到系统调用进入链表AUDIT_FILTER_ENTRY，用于决定进入到系统调用时是否创建审计事件</td>
+        </tr>
+        <tr>
+            <td>有效链表名l</td>
+            <td>exit</td>
+            <td>追加规则到系统调用退出链表AUDIT_FILTER_EXIT 。用于决定退出系统调用时是否创建审计事件</td>
+        </tr>
+        <tr>
+            <td>有效链表名l</td>
+            <td>user</td>
+            <td>追加规则到用户消息过滤链表AUDIT_FILTER_USER ，内核在转播用户空间产生的事件到审计后台之前，用这个链表过滤这些事件。仅域为uid、auid、gid和pid时有效</td>
+        </tr>
+        <tr>
+            <td>有效链表名l</td>
+            <td>exclude</td>
+            <td>用于过滤不想看到的事件，对应内核消息过滤链表AUDIT_FILTER_TYPE</td>
+        </tr>
+        <tr>
+            <td>规则的有效动作a</td>
+            <td>never</td>
+            <td>不产生审计记录</td>
+        </tr>
+        <tr>
+            <td>规则的有效动作a</td>
+            <td>always</td>
+            <td>分配一个审计上下文，在系统调用退出时填充</td>
+        </tr>
+        <tr>
+            <td>-A [l,a]</td>
+            <td></td>
+            <td>添加规则到l链表头，动作为a</td>
+        </tr>
+        <tr>
+            <td>-d [l,a]</td>
+            <td></td>
+            <td>从带有a动作的l链表删除规则</td>
+        </tr>
+        <tr>
+            <td>-D</td>
+            <td></td>
+            <td>删除所有的规则和watch</td>
+        </tr>
+        <tr>
+            <td>-S [系统调用名或号|all]</td>
+            <td></td>
+            <td>如果程序使用指定的系统调用，则它启动一项审计记录。如果给出域规则而没有指定系统调用，它将默认为所有系统调用</td>
+        </tr>
+        <tr>
+            <td>-F [n=v | n!=v | n&lt;v | n&gt;v | n&lt;=v | n&gt;=v]</td>
+            <td></td>
+            <td>创建一个规则域：名字、操作、值。可以单个命令行传递最多64个域。每个域必须启动一个审计记录。可支持6种操作：等于、不等于、小于、大于、小于或等于和大于或等于</td>
+        </tr>
+        <tr>
+            <td>-w [path]</td>
+            <td></td>
+            <td>为文件系统对象[path]插入一个watch（监视）。不支持匹配符</td>
+        </tr>
+        <tr>
+            <td>-W [path]</td>
+            <td></td>
+            <td>移去文件系统对象[path]上的watch</td>
+        </tr>
+    </tbody>
+</table>
+
+<ul>
+<li>-F 对应的域<br><br><img src="https://i.loli.net/2019/05/12/5cd6f1d545f81.png"></li>
+</ul>
+<h2 id="autrace"><a href="#autrace" class="headerlink" title="autrace"></a>autrace</h2><blockquote>
+<p>autrace是一个程序，它将添加审计规则、类似于strace跟踪一个进程，审计信息的结果将记录在审计log文件中。在目标程序执行的前后，它都将删除审计规则。目前没用,以后补充<br></p>
+</blockquote>
+<h2 id="ausearch"><a href="#ausearch" class="headerlink" title="ausearch"></a>ausearch</h2><blockquote>
+<p>工具ausearch用于查询审计后台的日志，它能基于不同搜索规则的事件查询审计后台日志。每个系统调用进入内核空间运行时有个唯一的事件ID，系统调用在进入内核后的运行过程的审计事件共享这个ID <br></p>
+</blockquote>
+<table>
+    <thead align="center">
+        <tr>
+            <th style="text-align:center">option</th>
+            <th style="text-align:center">full name</th>
+            <th style="text-align:center">description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>-a</td>
+            <td>--event audit-event-id</td>
+            <td>基于event ID检索（msg里包含time_stamp和eventID）</td>
+        </tr>
+        <tr>
+            <td>-c</td>
+            <td>--comm</td>
+            <td>基于comm名称检索</td>
+        </tr>
+        <tr>
+            <td>-e</td>
+            <td>--exit</td>
+            <td>基于exit code或errno检索</td>
+        </tr>
+        <tr>
+            <td>-f</td>
+            <td>--file</td>
+            <td>基于filename检索</td>
+        </tr>
+        <tr>
+            <td>-ga</td>
+            <td>--gid-all all-group-id</td>
+            <td>基于group ID或groupname检索</td>
+        </tr>
+        <tr>
+            <td>-ge</td>
+            <td>--gid-effectuve effective-group-id</td>
+            <td>基于effective group ID或name检索</td>
+        </tr>
+        <tr>
+            <td>-gi</td>
+            <td>--gid group-id</td>
+            <td>基于group ID或name检索</td>
+        </tr>
+        <tr>
+            <td>-h</td>
+            <td>--help</td>
+            <td>帮助信息</td>
+        </tr>
+        <tr>
+            <td>-hn</td>
+            <td>--host host-name</td>
+            <td>基于hostname检索，hostname不会进行解析</td>
+        </tr>
+        <tr>
+            <td>-i</td>
+            <td>--interpret</td>
+            <td>将数字编码解析问字符串（很多字段都进行了数字编码，通过此参数还原）</td>
+        </tr>
+        <tr>
+            <td>-if</td>
+            <td>--input file-name</td>
+            <td>搜索给定的文件，而不会去系统的audit日志中检索。通过这个参数可以将日志导出到其他机器上进行检索</td>
+        </tr>
+        <tr>
+            <td>--input-logs</td>
+            <td></td>
+            <td>使用auditd.conf中配置的日志文件路径来做检索，该参数用于写cron job的时候配合使用</td>
+        </tr>
+        <tr>
+            <td>--just-one</td>
+            <td></td>
+            <td>当出现了第一条匹配的日志时即停止检索，所以只会检索出第一条匹配的结果</td>
+        </tr>
+        <tr>
+            <td>-k</td>
+            <td>--key key-string</td>
+            <td>基于key进行检索</td>
+        </tr>
+        <tr>
+            <td>-l</td>
+            <td>--line-buffered</td>
+            <td>如果默认的缓冲规则不能满足需要，通过此参数可以将每条输出都立即flush到连接的stdout流中</td>
+        </tr>
+        <tr>
+            <td>-m</td>
+            <td>--message message-type |comma-sep-message-type-list</td>
+            <td>使用messagetype进行索引，可以指定某个type，也可以使用“逗号”将多个messagetype并列起来，逗号两侧不能有空格。可以使用ALL作为message type，用于匹配所有message type</td>
+        </tr>
+        <tr>
+            <td>-n</td>
+            <td>--node node-name</td>
+            <td>匹配node name</td>
+        </tr>
+        <tr>
+            <td>-o</td>
+            <td>--objectSE-Linux-context-string</td>
+            <td>匹配tcontext(object)</td>
+        </tr>
+        <tr>
+            <td>-p</td>
+            <td>--pid process-id</td>
+            <td>匹配process ID</td>
+        </tr>
+        <tr>
+            <td>-pp</td>
+            <td>--ppidparent-process-id</td>
+            <td>匹配parent process ID</td>
+        </tr>
+        <tr>
+            <td>-r</td>
+            <td>--raw</td>
+            <td>将未经格式化处理的原日志输出</td>
+        </tr>
+        <tr>
+            <td>-sc</td>
+            <td>--syscallsyscall-name-or-value</td>
+            <td>匹配syscall参数</td>
+        </tr>
+        <tr>
+            <td>-se</td>
+            <td>--context SE-Linux-context-string</td>
+            <td>匹配scontext/subject或tcontext/object</td>
+        </tr>
+        <tr>
+            <td>--session Login-Session-ID</td>
+            <td></td>
+            <td>匹配用户的Login Session ID</td>
+        </tr>
+        <tr>
+            <td>-su</td>
+            <td>--subject SE-Linux-context-string</td>
+            <td>匹配scontext(subject)</td>
+        </tr>
+        <tr>
+            <td>-sv</td>
+            <td>--success success-value</td>
+            <td>匹配success value</td>
+        </tr>
+        <tr>
+            <td>-te</td>
+            <td>--end[end-date][end-time]</td>
+            <td>匹配time stamp等于或早于给定参数的event，时间格式与本地时间格式匹配，如果省略掉日期，则默认指定today作为默认值。如果省略掉时间，则now作为默认值，使用24小时制。例如09/03/2009 18:00:00。常用的一些预定义的关键字：now/recent/today/yesterday/this-week/week-ago/this-month/this-year，其中，recent表示10分钟之前，其他的都可以按照字面意思理解</td>
+        </tr>
+        <tr>
+            <td>-ts</td>
+            <td>--start [start-date][start-time]</td>
+            <td>与-te参数类似，用于过滤日期和时间晚于给定时间的event。区别是如果时间参数省略，会以midnight作为默认值</td>
+        </tr>
+        <tr>
+            <td>-tm</td>
+            <td>--terminal terminal</td>
+            <td>匹配terminal参数</td>
+        </tr>
+        <tr>
+            <td>-ua</td>
+            <td>--uid-all all-user-id</td>
+            <td>匹配user ID/effective user ID/login user ID(auid)</td>
+        </tr>
+        <tr>
+            <td>-ue</td>
+            <td>--uid-effective</td>
+            <td>effective-user-id：匹配effective user ID</td>
+        </tr>
+        <tr>
+            <td>-ui</td>
+            <td> --uid user-id</td>
+            <td>匹配user ID</td>
+        </tr>
+        <tr>
+            <td>-ul</td>
+            <td>--loginuid login-id</td>
+            <td>匹配login user ID</td>
+        </tr>
+        <tr>
+            <td>-uu</td>
+            <td>--uuid guest-uuid</td>
+            <td>匹配guest UUID</td>
+        </tr>
+        <tr>
+            <td>-v</td>
+            <td>--version</td>
+            <td>打印版本</td>
+        </tr>
+        <tr>
+            <td>-vm</td>
+            <td>--vm-name guest-name</td>
+            <td>匹配guest name</td>
+        </tr>
+        <tr>
+            <td>-w</td>
+            <td>--word</td>
+            <td>条件中如果有字符串匹配，必须完全匹配，例如filename/hostname/terminal/SELinux context</td>
+        </tr>
+        <tr>
+            <td>-x</td>
+            <td>--executable executable</td>
+            <td>匹配executable名</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2 id="aureport"><a href="#aureport" class="headerlink" title="aureport"></a>aureport</h2><blockquote>
+<p>工具aureport用于产生审计后台日志的总结报告</p>
+</blockquote>
+<h2 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h2><pre><code>/etc/audit/auditd.conf 有以下作用
+1. 设置审计消息的专用日志文件
+2. 确定是否循环使用日志文件
+3. 如果日志文件的启动用掉了太多磁盘空间则发出警告
+4. 配置审计规则记录更详细的信息
+5. 激活文件和目录观察器
+[root@localhost ~]# cat /etc/audit/auditd.conf 
+#
+# This file controls the configuration of the audit daemon
+#
+
+log_file = /var/log/audit/audit.log
+log_format = RAW
+log_group = root
+priority_boost = 4
+flush = INCREMENTAL
+freq = 20
+num_logs = 5
+disp_qos = lossy
+dispatcher = /sbin/audispd
+name_format = NONE
+##name = mydomain
+max_log_file = 6 
+max_log_file_action = ROTATE
+space_left = 75
+space_left_action = SYSLOG
+action_mail_acct = root
+admin_space_left = 50
+admin_space_left_action = SUSPEND
+disk_full_action = SUSPEND
+disk_error_action = SUSPEND
+##tcp_listen_port = 
+tcp_listen_queue = 5
+tcp_max_per_addr = 1
+##tcp_client_ports = 1024-65535
+tcp_client_max_idle = 0
+enable_krb5 = no
+krb5_principal = auditd
+##krb5_key_file = /etc/audit/audit.key</code></pre>
+<p><a target="_blank" rel="noopener" href="https://linux.die.net/man/8/auditd.conf">配置文件说明</a> <br></p>
+<ul>
+<li><p>log_file<br></p>
+<blockquote>
+<p>审计日志文件的完整路径。如果您配置守护进程向除默认/var/log/audit/外的目录中写日志文件时，一定要修改它上面的文件权限，使得只有根用户有读、写和执行权限。所有其他用户都不能访问这个目录或这个目录中的日志文件</p>
+</blockquote>
+</li>
+<li><p>log_format<br></p>
+<blockquote>
+<p>写日志时要使用的格式。当设置为RAW时，数据会以从内核中检索到的格式写到日志文件中。当设置为NOLOG时，数据不会写到日志文件中，但是如果用dispatcher选项指定了一个，则数据仍然会发送到审计事件调度程序中</p>
+</blockquote>
+</li>
+<li><p>priority_boost<br></p>
+<blockquote>
+<p>审计应采用多少优先级推进守护进程。必须是非负数。0表示没有变化</p>
+</blockquote>
+</li>
+<li><p>flush<br></p>
+<blockquote>
+<p>多长时间向日志文件中写一次数据。值可以是NONE、INCREMENTAL、DATA和SYNC之一。如果设置为NONE，则不需要做特殊努力来将数据 刷新到日志文件中。如果设置为INCREMENTAL，则freq参数用于确定发出显式刷新磁盘的频率。如果设置为DATA，则审计数据和日志文 件一直是同步的。如果设置为SYNC，则每次写到日志文件时，数据和元数据是同步的</p>
+</blockquote>
+</li>
+<li><p>freq<br></p>
+<blockquote>
+<p>如果flush设置为INCREMETNAL，审计守护进程在写到日志文件中前从内核中接收的记录数</p>
+</blockquote>
+</li>
+<li><p>num_logs<br></p>
+<blockquote>
+<p>max_log_file_action设置为ROTATE时要保存的日志文件数目。必须是0~99之间的数。如果设置为小于2，则不会循环日志。如果递 增了日志文件的数目，就可能有必要递增/etc/audit/audit.rules中的内核backlog设置值，以便留出日志循环的时间。如果没有设 置num_logs值，它就默认为0，意味着从来不循环日志文件</p>
+</blockquote>
+</li>
+<li><p>dispatcher<br></p>
+<blockquote>
+<p>当启动这个守护进程时，由审计守护进程自动启动程序。所有守护进程都传递给这个程序。可以用它来进一步定制报表或者以与您的自定义分析程序兼容的不同格式 产生它们。自定义程序的示例代码可以在/usr/share/doc/audit- [version]/skeleton.c中找到。由于调度程序用根用户特权运行，因此使用这个选项时要极其小心。这个选项不是必需的</p>
+</blockquote>
+</li>
+<li><p>disp_qos<br></p>
+<blockquote>
+<p>控制调度程序与审计守护进程之间的通信类型。有效值为lossy和lossless。如果设置为lossy，若审计守护进程与调度程序之间的缓冲区已满 (缓冲区为128千字节)，则发送给调度程序的引入事件会被丢弃。然而，只要log_format没有设置为nolog，事件就仍然会写到磁盘中。如果设 置为lossless，则在向调度程序发送事件之前和将日志写到磁盘之前，调度程序会等待缓冲区有足够的空间</p>
+</blockquote>
+</li>
+<li><p>max_log_file<br></p>
+<blockquote>
+<p>以兆字节表示的最大日志文件容量。当达到这个容量时，会执行max_log_file _action指定的动作</p>
+</blockquote>
+</li>
+<li><p>max_log_file_action<br></p>
+<blockquote>
+<p>当达到max_log_file的日志文件大小时采取的动作。值必须是IGNORE、SYSLOG、SUSPEND、ROTATE和KEEP_LOGS之 一。如果设置为IGNORE，则在日志文件达到max_log_file后不采取动作。如果设置为SYSLOG，则当达到文件容量时会向系统日志/var /log/messages中写入一条警告。如果设置为SUSPEND，则当达到文件容量后不会向日志文件写入审计消息。如果设置为ROTATE，则当达 到指定文件容量后会循环日志文件，但是只会保存一定数目的老文件，这个数目由num_logs参数指定。老文件的文件名将为audit.log.N，其中 N是一个数字。这个数字越大，则文件越老。如果设置为KEEP_LOGS，则会循环日志文件，但是会忽略num_logs参数，因此不会删除日志文件</p>
+</blockquote>
+</li>
+<li><p>space_left<br></p>
+<blockquote>
+<p>以兆字节表示的磁盘空间数量。当达到这个水平时，会采取space_left_action参数中的动作</p>
+</blockquote>
+</li>
+<li><p>space_left_action<br></p>
+<blockquote>
+<p>当磁盘空间量达到space_left中的值时，采取这个动作。有效值为IGNORE、SYSLOG、EMAIL、SUSPEND、SINGLE和 HALT。如果设置为IGNORE，则不采取动作。如果设置为SYSLOG，则向系统日志/var/log/messages写一条警告消息。如果设置为 EMAIL，则从action_mail_acct向这个地址发送一封电子邮件，并向/var/log/messages中写一条警告消息。如果设置为 SUSPEND，则不再向审计日志文件中写警告消息。如果设置为SINGLE，则系统将在单用户模式下。如果设置为SALT，则系统会关闭</p>
+</blockquote>
+</li>
+<li><p>action_mail_acct<br></p>
+<blockquote>
+<p>负责维护审计守护进程和日志的管理员的电子邮件地址。如果地址没有主机名，则假定主机名为本地地址，比如root。必须安装sendmail并配置为向指定电子邮件地址发送电子邮件</p>
+</blockquote>
+</li>
+<li><p>admin_space_left<br></p>
+<blockquote>
+<p>以兆字节表示的磁盘空间数量。用这个选项设置比space_left_action更多的主动性动作，以防万一space_left_action没有让 管理员释放任何磁盘空间。这个值应小于space_left_action。如果达到这个水平，则会采取admin_space_left_ action所指定的动作</p>
+</blockquote>
+</li>
+<li><p>admin_space_left_action<br></p>
+<blockquote>
+<p>当自由磁盘空间量达到admin_space_left指定的值时，则采取动作。有效值为IGNORE、SYSLOG、EMAIL、SUSPEND、SINGLE和HALT。与这些值关联的动作与space_left_action中的相同</p>
+</blockquote>
+</li>
+<li><p>disk_full_action<br></p>
+<blockquote>
+<p>如果含有这个审计文件的分区已满，则采取这个动作。可能值为IGNORE、SYSLOG、SUSPEND、SINGLE和HALT。与这些值关联的动作与space_left _action中的相同。<br><br>提示：如果不循环审计日志文件，则含有/var/log/audit/的分区可能变满并引起系统错误。因此，建议让/var/log/audit/位于一个单独的专用分区</p>
+</blockquote>
+</li>
+<li><p>disk_error_action<br></p>
+<blockquote>
+<p>如果在写审计日志或循环日志文件时检测到错误时采取的动作。值必须是IGNORE、SYSLOG、SUSPEND、SINGLE和HALT之一。与这些值关的动作与space_left_action中的相同。<br></p>
+</blockquote>
+</li>
+</ul>
+<h2 id="日志文件"><a href="#日志文件" class="headerlink" title="日志文件"></a>日志文件</h2><p><a target="_blank" rel="noopener" href="https://access.redhat.com/documentation/zh-cn/red_hat_enterprise_linux/7/html/security_guide/sec-understanding_audit_log_files">日志文件字段说明</a><br></p>
+<blockquote>
+<p>type=SYSCALL msg=audit(1557677628.183:175): arch=c000003e syscall=59 success=yes exit=0 a0=c3a2d0 a1=c39d60 a2=c20a00 a3=7fff1f5044e0 items=3 ppid=5886 pid=6624 auid=0 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=pts1 ses=4 comm=”river.sh” exe=”/usr/bin/bash” key=”TheRiver”<br><br>type=EXECVE msg=audit(1557677628.183:175): argc=2 a0=”/bin/sh” a1=”./river.sh”<br><br>type=CWD msg=audit(1557677628.183:175):  cwd=”/home/river”<br><br>type=PATH msg=audit(1557677628.183:175): item=0 name=”./river.sh” inode=1000168 dev=fd:01 mode=0100755 ouid=0 ogid=0 rdev=00:00 objtype=NORMAL<br><br>type=PATH msg=audit(1557677628.183:175): item=1 name=(null) inode=67111165 dev=fd:01 mode=0100755 ouid=0 ogid=0 rdev=00:00 objtype=NORMAL<br><br>type=PATH msg=audit(1557677628.183:175): item=2 name=(null) inode=146951365 dev=fd:01 mode=0100755 ouid=0 ogid=0 rdev=00:00 objtype=NORMAL<br></p>
+</blockquote>
+<ul>
+<li><code>type=SYSCALL</code>这一行说明了audit的消息类型，audit消息类型可以对照<a target="_blank" rel="noopener" href="https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Security_Guide/sec-Audit_Record_Types.html%E7%9A%84%E8%A1%A8%E6%A0%BC%E8%BF%9B%E7%A8%8B%E6%9F%A5%E7%9C%8B%EF%BC%8CSYSCALL%E8%AF%B4%E6%98%8E%E6%AD%A4%E6%AC%A1audit%E8%AE%B0%E5%BD%95%E7%9A%84%E6%98%AF%E4%B8%80%E6%AC%A1%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8Kernel%E7%9A%84%E8%AE%B0%E5%BD%95">https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Security_Guide/sec-Audit_Record_Types.html的表格进程查看，SYSCALL说明此次audit记录的是一次系统调用Kernel的记录</a>    </li>
+<li><code>msg=audit(1557677628.183:175)</code>这一行的格式是(time_stamp:ID)，time_stamp是unix时间，可以将其转化为其他时间格式，可以使用站长工具进行转换：<a target="_blank" rel="noopener" href="http://tool.chinaz.com/Tools/unixtime.aspx%E3%80%82%E7%9B%B8%E5%90%8C%E7%9A%84audit">http://tool.chinaz.com/Tools/unixtime.aspx。相同的audit</a> event可能会产生多条time_stamp和event ID相同的log<br></li>
+<li><code>msg</code>后面跟了很多形式为“name=value”的键值对，这些键值对由kernel或者用户空间的进程产生<br></li>
+<li><code>arch=c000003e</code>标明CPU的类型，c000003e对应x86_64，使用ausearch查看audit日志时会自动将其解码</li>
+<li><code>syscall=59</code>指出了发送给kernel的系统调用的类型，可以使用ausyscall –dump来显示所有的syscall的说明<br></li>
+<li><code>succeed=yes/no</code>，说明此次syscall成功或失败<br></li>
+<li><code>exit=0</code>说明syscall的返回值是0<br></li>
+<li><code>a0，a1，a2，a3</code>指明了前4个参数，也是编码成16进制，通过ausearch命令可以解码查看<br></li>
+<li><code>items</code>指出event中的path记录的数量<br></li>
+<li><code>ppid=5886</code>输入栏记录了父进程ID（PPID）<br></li>
+<li><code>pid=6624</code>输入栏记录了进程ID（PID）<br></li>
+<li><code>auid=0</code>输入栏记录了审核用户ID，这个是loginuid。这个ID是用户在登录时使用的并且即使当用户身份改变时，也可以通过每个进程获取该ID。（例如，通过切换用户账户，使用su - john命令）<br></li>
+<li><code>uid=0</code>指出了对应进程的所有者ID<br></li>
+<li><code>gid=0</code>对应进程的group ID<br></li>
+<li><code>euid=0</code>对应进程的effective user ID<br></li>
+<li><code>suid=0</code>对应set user ID<br></li>
+<li><code>fsuid</code>对应file system user ID<br></li>
+<li><code>egid=0</code>对应effective group ID<br></li>
+<li><code>sgid</code>对应set group ID<br></li>
+<li><code>fsgid</code>对应file system group ID<br></li>
+<li><code>tty=pts1</code>指出对应进程是在哪个终端启动的<br></li>
+<li><code>ses=4</code>指出了对应进程的session ID<br></li>
+<li><code>comm=&quot;river.sh&quot;</code>对应了进程执行的命令<br></li>
+<li><code>exe=&quot;/usr/bin/bash&quot;</code>指出了进程的执行文件的路径<br></li>
+<li><code>key=&quot;TheRiver&quot;</code>是管理员定义的标明是哪条rule输出了这条audit日志<br></li>
+<li><code>CWD</code>指出了进程的执行目录（current working directory），cwd字段指出了第一条日志中syscall的执行路径<br></li>
+<li><code>第三条日志</code>用来记录所有传递给syscall作为参数的路径，在这个audit事件中，仅有/etc/ssh/sshd_config作为参数进行传递，通过name字段指明<br></li>
+<li><code>inode</code>指出了与文件或目录相对应的inode number，可以通过下面的命令查看inode对应的文件或目录:<code>find / -inum [inode number] -print</code> – /home/river/river.sh <br></li>
+<li><code>dev=fd:01</code>指出文件或目录对应的device ID<br></li>
+<li><code>mode=0100755</code>对应文件或目录的权限:rwxr-xr-x 1 root root<br></li>
+<li><code>ouid</code>对应文件的owner’s user ID<br></li>
+<li><code>ogid</code>对应文件的owner’s group ID<br></li>
+</ul>
+<h2 id="实践"><a href="#实践" class="headerlink" title="实践"></a>实践</h2><p><img src="https://i.loli.net/2019/05/12/5cd6fd5e0e6c3.png"><br><img src="https://i.loli.net/2019/05/12/5cd6fd5e19f06.png"></p>
+<pre><code>auditctl加入的规则是临时生效的,想永久生效需要在规则文件中加入,然后重启:service auditd restart</code></pre>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2019-05-11-%E6%96%87%E4%BB%B6%E5%AE%A1%E8%AE%A1auditd/" title="文件审计-auditd">https://riverferry.site/2019-05-11-文件审计auditd/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E8%BF%90%E7%BB%B4/" rel="tag"><i class="fa fa-tags"></i> 运维</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2019-05-05-%E5%8F%A5%E6%9F%84%E6%B3%84%E9%9C%B2%E7%9A%84%E5%AE%9A%E4%BD%8D%E8%BF%87%E7%A8%8B/" rel="prev" title="句柄泄露的定位过程">
+      <i class="fa fa-chevron-left"></i> 句柄泄露的定位过程
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2019-05-17-POE%E7%9B%B8%E6%9C%BA%E7%9A%84%E9%85%8D%E7%BD%AE/" rel="next" title="POE相机的安装配置">
+      POE相机的安装配置 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%AE%E5%BD%95"><span class="nav-number">1.</span> <span class="nav-text">目录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">2.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#audit%E7%AE%80%E4%BB%8B"><span class="nav-number">3.</span> <span class="nav-text">audit简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#auditd%E5%B7%A5%E5%85%B7"><span class="nav-number">4.</span> <span class="nav-text">auditd工具</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#auditd%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95"><span class="nav-number">5.</span> <span class="nav-text">auditd使用方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#auditctl"><span class="nav-number">6.</span> <span class="nav-text">auditctl</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#autrace"><span class="nav-number">7.</span> <span class="nav-text">autrace</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ausearch"><span class="nav-number">8.</span> <span class="nav-text">ausearch</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#aureport"><span class="nav-number">9.</span> <span class="nav-text">aureport</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6"><span class="nav-number">10.</span> <span class="nav-text">配置文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E6%96%87%E4%BB%B6"><span class="nav-number">11.</span> <span class="nav-text">日志文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E8%B7%B5"><span class="nav-number">12.</span> <span class="nav-text">实践</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : 'a50e38138b85d5b817385d75319e9d78',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta property="og:type" content="article">
+<meta property="og:title" content="2A raft leader election">
+<meta property="og:url" content="https://riverferry.site/2021-03-10-2A%20raft%20leader%20election/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:locale">
+<meta property="article:published_time" content="2021-03-10T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.292Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="raft">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://riverferry.site/2021-03-10-2A%20raft%20leader%20election/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>2A raft leader election | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2021-03-10-2A%20raft%20leader%20election/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          2A raft leader election
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-10 00:00:00" itemprop="dateCreated datePublished" datetime="2021-03-10T00:00:00+00:00">2021-03-10</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>10k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>10 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div class="note default">
+            
+          </div>
+
+<a id="more"></a>
+
+<p><a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.824/labs/lab-raft.html">2A Introduction</a></p>
+<h2 id="Part-2A"><a href="#Part-2A" class="headerlink" title="Part 2A"></a>Part 2A</h2><div class="note danger">
+            <p>Implement Raft leader election and heartbeats (AppendEntries RPCs with no log entries). The goal for Part 2A is for a single leader to be elected, for the leader to remain the leader if there are no failures, and for a new leader to take over if the old leader fails or if packets to/from the old leader are lost. Run go test -run 2A -race to test your 2A code.</p>
+          </div>
+
+<div class="note default">
+            <ul><li>You can’t easily run your Raft implementation directly; instead you should run it by way of the tester, i.e. go test -run 2A -race.</li><li>Follow the paper’s Figure 2. At this point you care about sending and receiving <code>RequestVote</code> RPCs, the <code>Rules for Servers</code> that relate to elections, and the <code>State</code> related to leader election,</li><li>Add the Figure 2 state for leader election to the <code>Raft struct</code> in raft.go. You’ll also need to define a struct to hold information about each <code>log entry</code>.</li><li>Fill in the RequestVoteArgs and RequestVoteReply structs. Modify Make() to create a background goroutine that will kick off leader election periodically by sending out RequestVote RPCs when it hasn’t heard from another peer for a while. This way a peer will learn who is the leader, if there is already a leader, or become the leader itself. Implement the RequestVote() RPC handler so that servers will vote for one another.</li><li>To implement heartbeats, define an AppendEntries RPC struct (though you may not need all the arguments yet), and have the leader send them out periodically. Write an AppendEntries RPC handler method that resets the election timeout so that other servers don’t step forward as leaders when one has already been elected.</li><li>Make sure the election timeouts in different peers don’t always fire at the same time, or else all peers will vote only for themselves and no one will become the leader.</li><li>The tester requires that the leader send heartbeat RPCs no more than ten times per second.</li><li>The tester requires your Raft to elect a new leader within five seconds of the failure of the old leader (if a majority of peers can still communicate). Remember, however, that leader election may require multiple rounds in case of a split vote (which can happen if packets are lost or if candidates unluckily choose the same random backoff times). You must pick election timeouts (and thus heartbeat intervals) that are short enough that it’s very likely that an election will complete in less than five seconds even if it requires multiple rounds.</li><li>The paper’s Section 5.2 mentions election timeouts in the range of 150 to 300 milliseconds. Such a range only makes sense if the leader sends heartbeats considerably more often than once per 150 milliseconds. Because the tester limits you to 10 heartbeats per second, you will have to use an election timeout larger than the paper’s 150 to 300 milliseconds, but not too large, because then you may fail to elect a leader within five seconds.</li><li>You may find Go’s rand useful.</li><li>You’ll need to write code that takes actions periodically or after delays in time. The easiest way to do this is to create a goroutine with a loop that calls time.Sleep(); (see the ticker() goroutine that Make() creates for this purpose). Don’t use Go’s time.Timer or time.Ticker, which are difficult to use correctly.</li><li>The Guidance page has some tips on how to develop and debug your code.</li><li>If your code has trouble passing the tests, read the paper’s Figure 2 again; the full logic for leader election is spread over multiple parts of the figure.</li><li>Don’t forget to implement GetState().</li><li>The tester calls your Raft’s rf.Kill() when it is permanently shutting down an instance. You can check whether Kill() has been called using rf.killed(). You may want to do this in all loops, to avoid having dead Raft instances print confusing messages.</li><li>Go RPC sends only struct fields whose names start with capital letters. Sub-structures must also have capitalized field names (e.g. fields of log records in an array). The labgob package will warn you about this; don’t ignore the warnings.</li></ul>
+          </div>
+
+<hr>
+<h2 id="My-Code"><a href="#My-Code" class="headerlink" title="My Code"></a>My Code</h2><h3 id="Make"><a href="#Make" class="headerlink" title="Make"></a>Make</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">// the service or tester wants to create a Raft server. the ports</span></span><br><span class="line"><span class="comment">// of all the Raft servers (including this one) are in peers[]. this</span></span><br><span class="line"><span class="comment">// server&#x27;s port is peers[me]. all the servers&#x27; peers[] arrays</span></span><br><span class="line"><span class="comment">// have the same order. persister is a place for this server to</span></span><br><span class="line"><span class="comment">// save its persistent state, and also initially holds the most</span></span><br><span class="line"><span class="comment">// recent saved state, if any. applyCh is a channel on which the</span></span><br><span class="line"><span class="comment">// tester or service expects Raft to send ApplyMsg messages.</span></span><br><span class="line"><span class="comment">// Make() must return quickly, so it should start goroutines</span></span><br><span class="line"><span class="comment">// for any long-running work.</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">// todo add context</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Make</span><span class="params">(peers []*labrpc.ClientEnd, me <span class="keyword">int</span>,</span></span></span><br><span class="line"><span class="function"><span class="params">	persister *Persister, applyCh <span class="keyword">chan</span> ApplyMsg)</span> *<span class="title">Raft</span></span> &#123;</span><br><span class="line">	log.Println(<span class="string">&quot;begin make.., me &quot;</span>, me)</span><br><span class="line">	rf := &amp;Raft&#123;&#125;</span><br><span class="line">	rf.peers = peers</span><br><span class="line">	rf.persister = persister</span><br><span class="line">	rf.me = me</span><br><span class="line">	rf.hasLeader = <span class="literal">false</span></span><br><span class="line">	rf.refreshCh = <span class="built_in">make</span>(<span class="keyword">chan</span> <span class="keyword">struct</span>&#123;&#125;)</span><br><span class="line">	rf.heartCh = <span class="built_in">make</span>(<span class="keyword">chan</span> <span class="keyword">struct</span>&#123;&#125;)</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Your initialization code here (2A, 2B, 2C).</span></span><br><span class="line">	<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">for</span> &#123;</span><br><span class="line">			<span class="comment">// rand time 300-400 ms</span></span><br><span class="line">			rand.Seed(time.Now().UTC().UnixNano())</span><br><span class="line">			randtime := rand.Intn(<span class="number">100</span>) + <span class="number">300</span></span><br><span class="line">			timeout := time.After(time.Duration(randtime) * time.Millisecond)</span><br><span class="line"></span><br><span class="line">			<span class="keyword">select</span> &#123;</span><br><span class="line">			<span class="comment">// update log or leader</span></span><br><span class="line">			<span class="comment">// case ch := &lt;-applyCh:</span></span><br><span class="line">			<span class="comment">// 	&#123;</span></span><br><span class="line">			<span class="comment">// 		if ch.CommandValid == true &#123;</span></span><br><span class="line">			<span class="comment">// 			rf.lastApplied = ch.CommandIndex</span></span><br><span class="line">			<span class="comment">// 		&#125;</span></span><br><span class="line">			<span class="comment">// 	&#125;</span></span><br><span class="line"></span><br><span class="line">			<span class="comment">// refresh timeout</span></span><br><span class="line">			<span class="keyword">case</span> &lt;-rf.refreshCh:</span><br><span class="line"></span><br><span class="line">			<span class="comment">// begin elect</span></span><br><span class="line">			<span class="keyword">case</span> &lt;-timeout:</span><br><span class="line">				&#123;</span><br><span class="line">					<span class="keyword">if</span> rf.killed() &#123;</span><br><span class="line">						<span class="keyword">return</span></span><br><span class="line">					&#125;</span><br><span class="line"></span><br><span class="line">					<span class="keyword">go</span> rf.startElection(me)</span><br><span class="line">				&#125;</span><br><span class="line"></span><br><span class="line">			<span class="comment">// begin heartbeat</span></span><br><span class="line">			<span class="keyword">case</span> &lt;-rf.heartCh:</span><br><span class="line">				&#123;</span><br><span class="line">					<span class="keyword">if</span> rf.killed() &#123;</span><br><span class="line">						<span class="keyword">return</span></span><br><span class="line">					&#125;</span><br><span class="line"></span><br><span class="line">					<span class="comment">// The tester requires that the leader send heartbeat RPCs no more than ten times per second.</span></span><br><span class="line">					<span class="keyword">for</span> num, _ := <span class="keyword">range</span> peers &#123;</span><br><span class="line">						<span class="comment">// heartbeat</span></span><br><span class="line">						<span class="keyword">if</span> num != me &#123;</span><br><span class="line">							<span class="keyword">go</span> rf.heartBeatOne(num)</span><br><span class="line">						&#125;</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line"></span><br><span class="line">	<span class="comment">// initialize from state persisted before a crash</span></span><br><span class="line">	rf.readPersist(persister.ReadRaftState())</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> rf</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="startElection"><a href="#startElection" class="headerlink" title="startElection"></a>startElection</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(rf *Raft)</span> <span class="title">startElection</span><span class="params">(me <span class="keyword">int</span>)</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> count <span class="keyword">int</span> = <span class="built_in">len</span>(rf.peers)</span><br><span class="line"></span><br><span class="line">	<span class="comment">// become candidater</span></span><br><span class="line">	log.Println(<span class="string">&quot;me become candidater &quot;</span>, me)</span><br><span class="line">	rf.mu.Lock()</span><br><span class="line">	rf.hasLeader = <span class="literal">false</span></span><br><span class="line">	rf.currentTerm++</span><br><span class="line">	rf.votenum = <span class="number">1</span></span><br><span class="line">	rf.isLeader = <span class="literal">false</span></span><br><span class="line">	rf.mu.Unlock()</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> num, _ := <span class="keyword">range</span> rf.peers &#123;</span><br><span class="line">		<span class="keyword">if</span> num != me &#123;</span><br><span class="line">			<span class="keyword">var</span> args RequestVoteArgs</span><br><span class="line">			<span class="keyword">var</span> reply RequestVoteReply</span><br><span class="line"></span><br><span class="line">			rf.mu.Lock()</span><br><span class="line">			<span class="comment">// already has leader</span></span><br><span class="line">			<span class="keyword">if</span> rf.hasLeader == <span class="literal">true</span> &#123;</span><br><span class="line">				log.Println(<span class="string">&quot;break elect,  hasleader, who =  &quot;</span>, me)</span><br><span class="line">				rf.mu.Unlock()</span><br><span class="line">				<span class="keyword">break</span></span><br><span class="line">			&#125;</span><br><span class="line">			args.Term = rf.currentTerm</span><br><span class="line">			args.CandidateId = me</span><br><span class="line">			lognum := <span class="built_in">len</span>(rf.log)</span><br><span class="line">			<span class="keyword">if</span> lognum &gt; <span class="number">0</span> &#123;</span><br><span class="line">				args.LastLogIndex = rf.log[lognum<span class="number">-1</span>].Index</span><br><span class="line">				args.LastLogTerm = rf.log[lognum<span class="number">-1</span>].Term</span><br><span class="line">			&#125;</span><br><span class="line">			rf.mu.Unlock()</span><br><span class="line"></span><br><span class="line">			<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">(server <span class="keyword">int</span>)</span></span> &#123;</span><br><span class="line">				ret := rf.sendRequestVote(server, &amp;args, &amp;reply)</span><br><span class="line">				<span class="keyword">if</span> ret != <span class="literal">true</span> &#123;</span><br><span class="line">					<span class="keyword">return</span></span><br><span class="line">				&#125;</span><br><span class="line"></span><br><span class="line">				rf.mu.Lock()</span><br><span class="line">				<span class="keyword">defer</span> rf.mu.Unlock()</span><br><span class="line">				<span class="comment">// become follower</span></span><br><span class="line">				<span class="keyword">if</span> reply.Term &gt; rf.currentTerm &#123;</span><br><span class="line">					log.Println(<span class="string">&quot;me become follower &quot;</span>, me)</span><br><span class="line">					rf.isLeader = <span class="literal">false</span></span><br><span class="line">					<span class="keyword">return</span></span><br><span class="line">				&#125;</span><br><span class="line"></span><br><span class="line">				<span class="keyword">if</span> reply.VoteGranted == <span class="literal">true</span> &#123;</span><br><span class="line">					rf.votenum++</span><br><span class="line">				&#125;</span><br><span class="line"></span><br><span class="line">				log.Println(<span class="string">&quot;votenum count/2 me &quot;</span>, rf.votenum, count/<span class="number">2</span>, me)</span><br><span class="line">				<span class="comment">// become leader</span></span><br><span class="line">				<span class="keyword">if</span> rf.votenum &gt; count/<span class="number">2</span> &#123;</span><br><span class="line">					log.Println(<span class="string">&quot;become leader me&quot;</span>, me)</span><br><span class="line">					rf.hasLeader = <span class="literal">true</span></span><br><span class="line">					<span class="keyword">if</span> !rf.isLeader &#123;</span><br><span class="line">						rf.isLeader = <span class="literal">true</span></span><br><span class="line">						rf.heartCh &lt;- <span class="keyword">struct</span>&#123;&#125;&#123;&#125;</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;(num)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="heartBeatOne"><a href="#heartBeatOne" class="headerlink" title="heartBeatOne"></a>heartBeatOne</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(rf *Raft)</span> <span class="title">heartBeatOne</span><span class="params">(num <span class="keyword">int</span>)</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> &#123;</span><br><span class="line">		<span class="keyword">var</span> req AppendEntriesReq</span><br><span class="line">		<span class="keyword">var</span> rsp AppendEntriesRsp</span><br><span class="line"></span><br><span class="line">		rf.mu.Lock()</span><br><span class="line">		rf.refreshCh &lt;- <span class="keyword">struct</span>&#123;&#125;&#123;&#125;</span><br><span class="line">		<span class="keyword">if</span> !rf.hasLeader || !rf.isLeader || rf.killed() &#123;</span><br><span class="line">			rf.mu.Unlock()</span><br><span class="line">			<span class="keyword">break</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		req.Term = rf.currentTerm</span><br><span class="line">		req.LeaderId = rf.me</span><br><span class="line">		rf.mu.Unlock()</span><br><span class="line"></span><br><span class="line">		ret := rf.sendAppendEntries(num, &amp;req, &amp;rsp)</span><br><span class="line">		<span class="keyword">if</span> ret != <span class="literal">true</span> &#123;</span><br><span class="line">			log.Println(<span class="string">&quot;sendAppendEntries err, server =  me = &quot;</span>, num, rf.me)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// expired</span></span><br><span class="line">		rf.mu.Lock()</span><br><span class="line">		<span class="keyword">if</span> rsp.Term &gt; rf.currentTerm &#123;</span><br><span class="line">			rf.isLeader = <span class="literal">false</span></span><br><span class="line">			rf.mu.Unlock()</span><br><span class="line">			<span class="keyword">break</span></span><br><span class="line">		&#125;</span><br><span class="line">		rf.mu.Unlock()</span><br><span class="line"></span><br><span class="line">		time.Sleep(<span class="number">150</span> * time.Millisecond)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="RequestVote"><a href="#RequestVote" class="headerlink" title="RequestVote"></a>RequestVote</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">// example RequestVote RPC handler.</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(rf *Raft)</span> <span class="title">RequestVote</span><span class="params">(args *RequestVoteArgs, reply *RequestVoteReply)</span></span> &#123;</span><br><span class="line">	<span class="comment">// Your code here (2A, 2B).</span></span><br><span class="line">	<span class="comment">//1. Reply false if term &lt; currentTerm (§5.1)</span></span><br><span class="line">	<span class="comment">//2. If votedFor is null or candidateId, and candidate’s log is at</span></span><br><span class="line">	<span class="comment">//least as up-to-date as receiver’s log, grant vote (§5.2, §5.4)</span></span><br><span class="line">	<span class="keyword">if</span> rf.killed() &#123;</span><br><span class="line">		reply.VoteGranted = <span class="literal">false</span></span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rf.mu.Lock()</span><br><span class="line">	<span class="keyword">if</span> args.Term &lt; rf.currentTerm &#123;</span><br><span class="line">		reply.VoteGranted = <span class="literal">false</span></span><br><span class="line">	&#125; <span class="keyword">else</span> <span class="keyword">if</span> args.Term &gt; rf.currentTerm &#123;</span><br><span class="line">		reply.VoteGranted = <span class="literal">true</span></span><br><span class="line">	&#125; <span class="keyword">else</span> &#123; <span class="comment">// args.Term == rf.currentTerm</span></span><br><span class="line">		<span class="comment">// one term only vote one server</span></span><br><span class="line">		<span class="keyword">if</span> rf.votedFor == <span class="number">0</span> || rf.votedFor == args.CandidateId &#123;</span><br><span class="line">			loglen := <span class="built_in">len</span>(rf.log)</span><br><span class="line">			<span class="keyword">if</span> loglen == <span class="number">0</span> &#123;</span><br><span class="line">				reply.VoteGranted = <span class="literal">true</span></span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> args.LastLogTerm &gt; rf.log[loglen<span class="number">-1</span>].Term ||</span><br><span class="line">				(args.LastLogTerm == rf.log[loglen<span class="number">-1</span>].Term &amp;&amp; args.LastLogIndex &gt;= rf.log[loglen<span class="number">-1</span>].Index) &#123;</span><br><span class="line">				reply.VoteGranted = <span class="literal">true</span></span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> reply.VoteGranted == <span class="literal">true</span> &#123;</span><br><span class="line">		log.Println(<span class="string">&quot;me vote him &quot;</span>, rf.me, args.CandidateId)</span><br><span class="line">		rf.votedFor = args.CandidateId</span><br><span class="line">		rf.isLeader = <span class="literal">false</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	reply.Term = rf.currentTerm</span><br><span class="line">	rf.mu.Unlock()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="AppendEntries"><a href="#AppendEntries" class="headerlink" title="AppendEntries"></a>AppendEntries</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Receiver implementation:</span></span><br><span class="line"><span class="comment">// 1. Reply false if term &lt; currentTerm (§5.1)</span></span><br><span class="line"><span class="comment">// 2. Reply false if log doesn’t contain an entry at prevLogIndex</span></span><br><span class="line"><span class="comment">// whose term matches prevLogTerm (§5.3)</span></span><br><span class="line"><span class="comment">// 3. If an existing entry conflicts with a new one (same index</span></span><br><span class="line"><span class="comment">// but different terms), delete the existing entry and all that</span></span><br><span class="line"><span class="comment">// follow it (§5.3)</span></span><br><span class="line"><span class="comment">// 4. Append any new entries not already in the log</span></span><br><span class="line"><span class="comment">// 5. If leaderCommit &gt; commitIndex, set commitIndex = min(leaderCommit, index of last new entry)</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(rf *Raft)</span> <span class="title">AppendEntries</span><span class="params">(req *AppendEntriesReq, rsp *AppendEntriesRsp)</span></span> &#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> rf.killed() &#123;</span><br><span class="line">		rsp.Success = <span class="literal">false</span></span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rf.mu.Lock()</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		rsp.Term = rf.currentTerm</span><br><span class="line">		rf.mu.Unlock()</span><br><span class="line">	&#125;()</span><br><span class="line"></span><br><span class="line">	<span class="comment">// expired</span></span><br><span class="line">	<span class="keyword">if</span> req.Term &lt; rf.currentTerm &#123;</span><br><span class="line">		rsp.Success = <span class="literal">false</span></span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// heartbeat</span></span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(req.Entries) == <span class="number">0</span> &#123;</span><br><span class="line">		rf.hasLeader = <span class="literal">true</span></span><br><span class="line">		rf.currentTerm = req.Term</span><br><span class="line">		rf.isLeader = <span class="literal">false</span></span><br><span class="line">		rf.refreshCh &lt;- <span class="keyword">struct</span>&#123;&#125;&#123;&#125;</span><br><span class="line">		rsp.Success = <span class="literal">true</span></span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(rf.log) &gt; req.PrevLogIndex &amp;&amp; rf.log[req.PrevLogIndex].Term != req.PrevLogTerm &#123;</span><br><span class="line">		rsp.Success = <span class="literal">false</span></span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rsp.Success = <span class="literal">true</span></span><br><span class="line">	<span class="keyword">for</span> _, value := <span class="keyword">range</span> req.Entries &#123;</span><br><span class="line">		rf.log[value.Index] = value</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// why?</span></span><br><span class="line">	<span class="keyword">if</span> req.LeaderCommit &gt; rf.commitIndex &#123;</span><br><span class="line">		<span class="keyword">if</span> req.LeaderCommit &lt; req.Entries[<span class="built_in">len</span>(req.Entries)<span class="number">-1</span>].Index &#123;</span><br><span class="line">			rf.commitIndex = req.LeaderCommit</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			rf.commitIndex = req.Entries[<span class="built_in">len</span>(req.Entries)<span class="number">-1</span>].Index</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="test"><a href="#test" class="headerlink" title="test"></a>test</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">#! &#x2F;bin&#x2F;sh</span><br><span class="line"></span><br><span class="line">for((i&#x3D;1;i&lt;&#x3D;500;i++));</span><br><span class="line">do</span><br><span class="line">echo &quot;---------------------$i&quot; &gt;&gt;2a.log</span><br><span class="line">go test -run 2A -race  2&gt;&amp;1 &gt;&gt;2a.log</span><br><span class="line">echo &quot;&quot;</span><br><span class="line">done;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line">grep PASS 2a.log | wc -l</span><br><span class="line">500</span><br><span class="line"></span><br><span class="line">ok  	pathname	7.480s</span><br><span class="line">ok  	pathname	7.453s</span><br><span class="line">ok  	pathname	7.463s</span><br><span class="line">ok  	pathname	7.581s</span><br><span class="line">ok  	pathname	7.587s</span><br><span class="line">ok  	pathname	7.534s</span><br><span class="line">ok  	pathname	7.483s</span><br><span class="line">ok  	pathname	7.667s</span><br><span class="line">ok  	pathname	7.499s</span><br><span class="line">ok  	pathname	7.520s</span><br><span class="line">ok  	pathname	7.539s</span><br><span class="line">ok  	pathname	7.475s</span><br><span class="line">ok  	pathname	7.519s</span><br><span class="line">ok  	pathname	7.657s</span><br><span class="line">ok  	pathname	7.617s</span><br><span class="line">ok  	pathname	7.728s</span><br><span class="line">ok  	pathname	7.539s</span><br><span class="line">ok  	pathname	8.254s</span><br><span class="line">ok  	pathname	7.591s</span><br><span class="line">ok  	pathname	7.618s</span><br><span class="line">ok  	pathname	7.703s</span><br><span class="line">ok  	pathname	8.075s</span><br><span class="line">ok  	pathname	7.509s</span><br><span class="line">ok  	pathname	7.644s</span><br><span class="line">ok  	pathname	7.381s</span><br><span class="line">ok  	pathname	7.607s</span><br><span class="line">ok  	pathname	7.616s</span><br><span class="line">ok  	pathname	7.646s</span><br><span class="line">ok  	pathname	7.571s</span><br><span class="line">ok  	pathname	7.443s</span><br><span class="line">ok  	pathname	7.533s</span><br><span class="line">ok  	pathname	7.552s</span><br><span class="line">ok  	pathname	7.562s</span><br><span class="line">ok  	pathname	8.243s</span><br><span class="line">ok  	pathname	7.559s</span><br><span class="line">ok  	pathname	8.128s</span><br><span class="line">ok  	pathname	8.000s</span><br><span class="line">ok  	pathname	7.654s</span><br><span class="line">ok  	pathname	7.579s</span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2021-03-10-2A%20raft%20leader%20election/" title="2A raft leader election">https://riverferry.site/2021-03-10-2A raft leader election/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/raft/" rel="tag"><i class="fa fa-tags"></i> raft</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021-03-05-protobuf%20%E6%95%B4%E7%90%86%E5%92%8C%E5%9D%91/" rel="prev" title="protobuf 整理和坑">
+      <i class="fa fa-chevron-left"></i> protobuf 整理和坑
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021-03-17-when-goroutine-quit/" rel="next" title="when goroutine quit">
+      when goroutine quit <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Part-2A"><span class="nav-number">1.</span> <span class="nav-text">Part 2A</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#My-Code"><span class="nav-number">2.</span> <span class="nav-text">My Code</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Make"><span class="nav-number">2.1.</span> <span class="nav-text">Make</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#startElection"><span class="nav-number">2.2.</span> <span class="nav-text">startElection</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#heartBeatOne"><span class="nav-number">2.3.</span> <span class="nav-text">heartBeatOne</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RequestVote"><span class="nav-number">2.4.</span> <span class="nav-text">RequestVote</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#AppendEntries"><span class="nav-number">2.5.</span> <span class="nav-text">AppendEntries</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#test"><span class="nav-number">3.</span> <span class="nav-text">test</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : 'a0bf5b16e8227b4facc1d0c8f6eff32f',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="linux 2.1和linux2.6在线程实现上是不同的。在Linux2.4中，LinuxThreads是用单独的进程实现每个线程的，这使得它很难与posix线程的行为匹配。在linux2.6中，对linux内核和线程库进行了很大的修改，采用了一个称为Native POSIX线程库(NPTL)的新线程实现。它支持单个进程中有多个线程的模型，也更容易支持posix线程的语义">
+<meta property="og:type" content="article">
+<meta property="og:title" content="C++ std::thread">
+<meta property="og:url" content="https://riverferry.site/2022-03-30-C++%20std::thread/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="linux 2.1和linux2.6在线程实现上是不同的。在Linux2.4中，LinuxThreads是用单独的进程实现每个线程的，这使得它很难与posix线程的行为匹配。在linux2.6中，对linux内核和线程库进行了很大的修改，采用了一个称为Native POSIX线程库(NPTL)的新线程实现。它支持单个进程中有多个线程的模型，也更容易支持posix线程的语义">
+<meta property="og:locale">
+<meta property="article:published_time" content="2022-03-30T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.294Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="c++">
+<meta property="article:tag" content="网络编程">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://riverferry.site/2022-03-30-C++%20std::thread/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>C++ std::thread | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2022-03-30-C++%20std::thread/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          C++ std::thread
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-03-30 00:00:00" itemprop="dateCreated datePublished" datetime="2022-03-30T00:00:00+00:00">2022-03-30</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>5.5k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>5 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div class="note default">
+            <p>linux 2.1和linux2.6在线程实现上是不同的。在Linux2.4中，LinuxThreads是用单独的进程实现每个线程的，这使得它很难与posix线程的行为匹配。在linux2.6中，对linux内核和线程库进行了很大的修改，采用了一个称为Native POSIX线程库(NPTL)的新线程实现。它支持单个进程中有多个线程的模型，也更容易支持posix线程的语义。</p>
+          </div>
+
+
+<a id="more"></a>
+
+<table>
+<thead>
+<tr>
+<th>date</th>
+<th>author</th>
+<th>gcc</th>
+<th>kernel</th>
+<th>glibc</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>20220331</td>
+<td>river</td>
+<td>gcc-11.2.0</td>
+<td>linux-4.18.1</td>
+<td>glibc-2.35</td>
+</tr>
+</tbody></table>
+<div class="pdfobject-container" data-target="https://riverferry.site/pdf/pthread.pdf" data-height="1000px"></div>
+
+<h2 id="std-thread"><a href="#std-thread" class="headerlink" title="std::thread"></a>std::thread</h2><h3 id="datastruct"><a href="#datastruct" class="headerlink" title="datastruct"></a>datastruct</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">thread</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">	<span class="keyword">using</span> native_handle_type = <span class="keyword">__gthread_t</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/// thread::id</span></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">id</span></span></span><br><span class="line"><span class="class">    &#123;</span></span><br><span class="line">      native_handle_type	_M_thread;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">      <span class="built_in">id</span>() <span class="keyword">noexcept</span> : _M_thread() &#123; &#125;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">explicit</span></span><br><span class="line">      <span class="built_in">id</span>(native_handle_type __id) : _M_thread(__id) &#123; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span>:</span><br><span class="line">      <span class="keyword">friend</span> <span class="class"><span class="keyword">class</span> <span class="title">thread</span>;</span></span><br><span class="line">      <span class="keyword">friend</span> <span class="class"><span class="keyword">struct</span> <span class="title">hash</span>&lt;</span>id&gt;;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">friend</span> <span class="keyword">bool</span></span><br><span class="line">      <span class="keyword">operator</span>==(id __x, id __y) <span class="keyword">noexcept</span>;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> __cpp_lib_three_way_comparison</span></span><br><span class="line">      <span class="keyword">friend</span> strong_ordering</span><br><span class="line">      <span class="keyword">operator</span>&lt;=&gt;(id __x, id __y) <span class="keyword">noexcept</span>;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">      <span class="keyword">friend</span> <span class="keyword">bool</span></span><br><span class="line">      <span class="keyword">operator</span>&lt;(id __x, id __y) <span class="keyword">noexcept</span>;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">      <span class="keyword">template</span>&lt;<span class="class"><span class="keyword">class</span> _<span class="title">CharT</span>, <span class="keyword">class</span> _<span class="title">Traits</span>&gt;</span></span><br><span class="line">	<span class="keyword">friend</span> basic_ostream&lt;_CharT, _Traits&gt;&amp;</span><br><span class="line">	<span class="keyword">operator</span>&lt;&lt;(basic_ostream&lt;_CharT, _Traits&gt;&amp; __out, id __id);</span><br><span class="line">    &#125;;</span><br><span class="line">	<span class="comment">// member</span></span><br><span class="line">	id				_M_id;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// ctor</span></span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">    <span class="built_in">thread</span>() <span class="keyword">noexcept</span> = <span class="keyword">default</span>;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> _GLIBCXX_HAS_GTHREADS</span></span><br><span class="line">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> _Callable, <span class="keyword">typename</span>... _Args,</span><br><span class="line">	     <span class="keyword">typename</span> = _Require&lt;__not_same&lt;_Callable&gt;&gt;&gt;</span><br><span class="line">      <span class="keyword">explicit</span></span><br><span class="line">      <span class="built_in">thread</span>(_Callable&amp;&amp; __f, _Args&amp;&amp;... __args)</span><br><span class="line">      &#123;</span><br><span class="line">	<span class="built_in"><span class="keyword">static_assert</span></span>( __is_invocable&lt;<span class="keyword">typename</span> decay&lt;_Callable&gt;::type,</span><br><span class="line">				      <span class="keyword">typename</span> decay&lt;_Args&gt;::type...&gt;::value,</span><br><span class="line">	  <span class="string">&quot;std::thread arguments must be invocable after conversion to rvalues&quot;</span></span><br><span class="line">	  );</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> GTHR_ACTIVE_PROXY</span></span><br><span class="line">	<span class="comment">// Create a reference to pthread_create, not just the gthr weak symbol.</span></span><br><span class="line">	<span class="keyword">auto</span> __depend = <span class="keyword">reinterpret_cast</span>&lt;<span class="built_in"><span class="keyword">void</span></span>(*)()&gt;(&amp;pthread_create);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">	<span class="keyword">auto</span> __depend = <span class="literal">nullptr</span>;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">	<span class="keyword">using</span> _Wrapper = _Call_wrapper&lt;_Callable, _Args...&gt;;</span><br><span class="line">	<span class="comment">// Create a call wrapper with DECAY_COPY(__f) as its target object</span></span><br><span class="line">	<span class="comment">// and DECAY_COPY(__args)... as its bound argument entities.</span></span><br><span class="line">	_M_start_thread(_State_ptr(<span class="keyword">new</span> _State_impl&lt;_Wrapper&gt;(</span><br><span class="line">	      std::forward&lt;_Callable&gt;(__f), std::forward&lt;_Args&gt;(__args)...)),</span><br><span class="line">	    __depend);</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// dtor</span></span><br><span class="line">	~<span class="built_in">thread</span>()</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="keyword">if</span> (<span class="built_in">joinable</span>())</span><br><span class="line">	std::<span class="built_in">terminate</span>();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// rule of four</span></span><br><span class="line">	<span class="built_in">thread</span>(<span class="keyword">const</span> thread&amp;) = <span class="keyword">delete</span>;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">thread</span>(thread&amp;&amp; <span class="keyword">__t</span>) <span class="keyword">noexcept</span></span><br><span class="line">    &#123; <span class="built_in">swap</span>(<span class="keyword">__t</span>); &#125;</span><br><span class="line"></span><br><span class="line">    thread&amp; <span class="keyword">operator</span>=(<span class="keyword">const</span> thread&amp;) = <span class="keyword">delete</span>;</span><br><span class="line"></span><br><span class="line">    thread&amp; <span class="keyword">operator</span>=(thread&amp;&amp; <span class="keyword">__t</span>) <span class="keyword">noexcept</span></span><br><span class="line">    &#123;</span><br><span class="line">      <span class="keyword">if</span> (<span class="built_in">joinable</span>())</span><br><span class="line">	std::<span class="built_in">terminate</span>();</span><br><span class="line">      <span class="built_in">swap</span>(<span class="keyword">__t</span>);</span><br><span class="line">      <span class="keyword">return</span> *<span class="keyword">this</span>;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>thread::id::native_handle_type在linux-posix下就是<code>typedef pthread_t __gthread_t;</code>c++的thread封装了pthread_t类型。删掉了拷贝构造和拷贝赋值函数。移动构造和移动赋值用到了经典了<code>copy and swap idiom</code></p>
+<h3 id="joinable"><a href="#joinable" class="headerlink" title="joinable"></a>joinable</h3><blockquote>
+<p>checks whether the thread is joinable, i.e. potentially running in parallel context (public member function)</p>
+</blockquote>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">bool</span></span><br><span class="line">    <span class="built_in">joinable</span>() <span class="keyword">const</span> <span class="keyword">noexcept</span></span><br><span class="line">    &#123; <span class="keyword">return</span> !(_M_id == <span class="built_in">id</span>()); &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">inline</span> <span class="keyword">bool</span></span><br><span class="line">  <span class="keyword">operator</span>==(thread::id __x, thread::id __y) <span class="keyword">noexcept</span></span><br><span class="line">  &#123;</span><br><span class="line">    <span class="comment">// pthread_equal is undefined if either thread ID is not valid, so we</span></span><br><span class="line">    <span class="comment">// can&#x27;t safely use __gthread_equal on default-constructed values (nor</span></span><br><span class="line">    <span class="comment">// the non-zero value returned by this_thread::get_id() for</span></span><br><span class="line">    <span class="comment">// single-threaded programs using GNU libc). Assume EqualityComparable.</span></span><br><span class="line">    <span class="keyword">return</span> __x._M_thread == __y._M_thread;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">pthread_equal</span><span class="params">(<span class="keyword">pthread_t</span> t1, <span class="keyword">pthread_t</span> t2)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">The pthread_equal() function shall return a non-zero value if t1</span></span><br><span class="line"><span class="comment">       and t2 are equal; otherwise, zero shall be returned.</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">       If either t1 or t2 are not valid thread IDs, the behavior is</span></span><br><span class="line"><span class="comment">       undefined.</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure>
+
+<p>linux3.2.0使用无符号长整形表示pthread_t,但在其他平台实现是不一样的。所以这里通过和默认值做比较来判断_M_id是否是有效的。之所以不用pthread_equal原因如上。</p>
+<p>这里有点不好理解再补充下： <strong>thread</strong>的构造函数传入callable执行函数，内部会掉pthread_create,pthread_create会申请pthread_t的值，然后赋值给thread::id::_M_thread,所以只有pthread创建了线程std::thread才是joinable的。</p>
+<h3 id="join"><a href="#join" class="headerlink" title="join"></a>join</h3><blockquote>
+<pre><code>waits for the thread to finish its execution (public member function)</code></pre>
+</blockquote>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">  <span class="keyword">void</span></span><br><span class="line">  thread::<span class="built_in">join</span>()</span><br><span class="line">  &#123;</span><br><span class="line">    <span class="keyword">int</span> __e = EINVAL;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (_M_id != <span class="built_in">id</span>())</span><br><span class="line">      __e = __gthread_join(_M_id._M_thread, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (__e)</span><br><span class="line">      __throw_system_error(__e);</span><br><span class="line"></span><br><span class="line">    _M_id = <span class="built_in">id</span>();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">int</span></span><br><span class="line">__gthread_join (<span class="keyword">__gthread_t</span> __threadid, <span class="keyword">void</span> **__value_ptr)</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">return</span> __gthrw_(pthread_join) (__threadid, __value_ptr);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>调用posix的pthread_join来实现，第2个参数传的0，不接收pthread_exit传出来的值。最后给_M_id赋初始值表示无效。</p>
+<h3 id="detach"><a href="#detach" class="headerlink" title="detach"></a>detach</h3><blockquote>
+<p>permits the thread to execute independently from the thread handle (public member function)</p>
+</blockquote>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span></span><br><span class="line">  thread::<span class="built_in">detach</span>()</span><br><span class="line">  &#123;</span><br><span class="line">    <span class="keyword">int</span> __e = EINVAL;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (_M_id != <span class="built_in">id</span>())</span><br><span class="line">      __e = __gthread_detach(_M_id._M_thread);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (__e)</span><br><span class="line">      __throw_system_error(__e);</span><br><span class="line"></span><br><span class="line">    _M_id = <span class="built_in">id</span>();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">int</span></span><br><span class="line">__gthread_detach (<span class="keyword">__gthread_t</span> __threadid)</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">return</span> __gthrw_(pthread_detach) (__threadid);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>调用posix的pthread_detach来实现。最后给_M_id赋初始值表示无效。</p>
+<h3 id="swap"><a href="#swap" class="headerlink" title="swap"></a>swap</h3><blockquote>
+<p>swaps two thread objects (public member function)</p>
+</blockquote>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span></span><br><span class="line">    <span class="built_in">swap</span>(thread&amp; <span class="keyword">__t</span>) <span class="keyword">noexcept</span></span><br><span class="line">    &#123; std::<span class="built_in">swap</span>(_M_id, <span class="keyword">__t</span>._M_id); &#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">inline</span> <span class="keyword">void</span></span><br><span class="line">  <span class="built_in">swap</span>(thread&amp; __x, thread&amp; __y) <span class="keyword">noexcept</span></span><br><span class="line">  &#123; __x.<span class="built_in">swap</span>(__y); &#125;</span><br></pre></td></tr></table></figure>
+
+<p>实现copy and swap</p>
+<h3 id="hardware-concurrency"><a href="#hardware-concurrency" class="headerlink" title="hardware_concurrency"></a>hardware_concurrency</h3><blockquote>
+<p>returns the number of concurrent threads supported by the implementation (public static member function)</p>
+</blockquote>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Returns a value that hints at the number of hardware thread contexts.</span></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">unsigned</span> <span class="keyword">int</span></span><br><span class="line">    <span class="built_in">hardware_concurrency</span>() <span class="keyword">noexcept</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">unsigned</span> <span class="keyword">int</span></span><br><span class="line">  thread::<span class="built_in">hardware_concurrency</span>() <span class="keyword">noexcept</span></span><br><span class="line">  &#123;</span><br><span class="line">    <span class="keyword">int</span> __n = _GLIBCXX_NPROCS;</span><br><span class="line">    <span class="keyword">if</span> (__n &lt; <span class="number">0</span>)</span><br><span class="line">      __n = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">return</span> __n;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>在多核系统中返回cpu核心的数量，当无法获取返回0.</p>
+<h3 id="get-id"><a href="#get-id" class="headerlink" title="get_id"></a>get_id</h3><blockquote>
+<p>returns the id of the thread (public member function)</p>
+</blockquote>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">id</span><br><span class="line">    <span class="built_in">get_id</span>() <span class="keyword">const</span> <span class="keyword">noexcept</span></span><br><span class="line">    &#123; <span class="keyword">return</span> _M_id; &#125;</span><br></pre></td></tr></table></figure>
+
+<p>返回thread::id，还有个this_thread::get_id()可以返回任意thread的thread::id</p>
+<h3 id="native-handle"><a href="#native-handle" class="headerlink" title="native_handle"></a>native_handle</h3><blockquote>
+<p>returns the underlying implementation-defined thread handle (public member function)</p>
+</blockquote>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">native_handle_type</span><br><span class="line">    <span class="built_in">native_handle</span>()</span><br><span class="line">    &#123; <span class="keyword">return</span> _M_id._M_thread; &#125;</span><br></pre></td></tr></table></figure>
+
+<p>返回原生的线程id数据结构，posix下是pthread_t</p>
+<h2 id="reference"><a href="#reference" class="headerlink" title="reference"></a>reference</h2><p><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/thread/thread">https://en.cppreference.com/w/cpp/thread/thread</a></p>
+<p><a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man3/pthread_equal.3p.html">https://man7.org/linux/man-pages/man3/pthread_equal.3p.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://bewaremypower.github.io/2018/12/31/C-11%E4%B8%ADstd-thread%E5%92%8Cpthread%E6%B7%B7%E7%94%A8%E7%9A%84%E5%9D%91/">https://bewaremypower.github.io/2018/12/31/C-11%E4%B8%ADstd-thread%E5%92%8Cpthread%E6%B7%B7%E7%94%A8%E7%9A%84%E5%9D%91/</a></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2022-03-30-C++%20std::thread/" title="C++ std::thread">https://riverferry.site/2022-03-30-C++ std::thread/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/c/" rel="tag"><i class="fa fa-tags"></i> c++</a>
+              <a href="/tags/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/" rel="tag"><i class="fa fa-tags"></i> 网络编程</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021-11-10-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(1x)%20%E6%80%BB%E7%BB%93/" rel="prev" title="leveldb源码分析(1x) 总结">
+      <i class="fa fa-chevron-left"></i> leveldb源码分析(1x) 总结
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022-03-31-C++%20std::mutex/" rel="next" title="C++ std::mutex">
+      C++ std::mutex <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#std-thread"><span class="nav-number">1.</span> <span class="nav-text">std::thread</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#datastruct"><span class="nav-number">1.1.</span> <span class="nav-text">datastruct</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#joinable"><span class="nav-number">1.2.</span> <span class="nav-text">joinable</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#join"><span class="nav-number">1.3.</span> <span class="nav-text">join</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#detach"><span class="nav-number">1.4.</span> <span class="nav-text">detach</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#swap"><span class="nav-number">1.5.</span> <span class="nav-text">swap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#hardware-concurrency"><span class="nav-number">1.6.</span> <span class="nav-text">hardware_concurrency</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#get-id"><span class="nav-number">1.7.</span> <span class="nav-text">get_id</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#native-handle"><span class="nav-number">1.8.</span> <span class="nav-text">native_handle</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">2.</span> <span class="nav-text">reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : '47167ffe5a78fabc7c168e801733afcb',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

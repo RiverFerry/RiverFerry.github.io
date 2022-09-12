@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="参考Linux信号（signal) 机制分析 SIGSEGV 和 SIGBUS &amp; gdb看汇编">
+<meta property="og:type" content="article">
+<meta property="og:title" content="信号和信号处理函数">
+<meta property="og:url" content="https://riverferry.site/2020-04-07-linux-%E4%BF%A1%E5%8F%B7/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="参考Linux信号（signal) 机制分析 SIGSEGV 和 SIGBUS &amp; gdb看汇编">
+<meta property="og:locale">
+<meta property="og:image" content="https://i.loli.net/2020/01/13/i6X9R4SyIOBTQ71.jpg">
+<meta property="article:published_time" content="2020-04-07T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.280Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="ipc">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/01/13/i6X9R4SyIOBTQ71.jpg">
+
+<link rel="canonical" href="https://riverferry.site/2020-04-07-linux-%E4%BF%A1%E5%8F%B7/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>信号和信号处理函数 | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2020-04-07-linux-%E4%BF%A1%E5%8F%B7/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          信号和信号处理函数
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-04-07 00:00:00" itemprop="dateCreated datePublished" datetime="2020-04-07T00:00:00+00:00">2020-04-07</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>4.7k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>4 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/66051508">Linux信号（signal) 机制分析</a> <br><br><a target="_blank" rel="noopener" href="https://www.cnblogs.com/charlesblc/p/6262783.html">SIGSEGV 和 SIGBUS &amp; gdb看汇编</a></p>
+<a id="more"></a>
+
+<h2 id="信号"><a href="#信号" class="headerlink" title="信号"></a>信号</h2><p>信号是软件中断,很多比较重要的应用程序都需处理信号.信号提供了一种处理异步事件的方法，例如,终端用户键入中断键，会通过信号机制停止一个程序，或及早终止管道中的下一个程序.</p>
+<h3 id="常见信号"><a href="#常见信号" class="headerlink" title="常见信号"></a>常见信号</h3><pre><code>1) SIGHUP     2) SIGINT     3) SIGQUIT     4) SIGILL     5) SIGTRAP
+ 6) SIGABRT     7) SIGBUS     8) SIGFPE     9) SIGKILL    10) SIGUSR1
+11) SIGSEGV    12) SIGUSR2    13) SIGPIPE    14) SIGALRM    15) SIGTERM
+16) SIGSTKFLT    17) SIGCHLD    18) SIGCONT    19) SIGSTOP    20) SIGTSTP
+21) SIGTTIN    22) SIGTTOU    23) SIGURG    24) SIGXCPU    25) SIGXFSZ
+26) SIGVTALRM    27) SIGPROF    28) SIGWINCH    29) SIGIO    30) SIGPWR
+31) SIGSYS    34) SIGRTMIN    35) SIGRTMIN+1    36) SIGRTMIN+2    37) SIGRTMIN+3
+38) SIGRTMIN+4    39) SIGRTMIN+5    40) SIGRTMIN+6    41) SIGRTMIN+7    42) SIGRTMIN+8
+43) SIGRTMIN+9    44) SIGRTMIN+10    45) SIGRTMIN+11    46) SIGRTMIN+12    47) SIGRTMIN+13
+48) SIGRTMIN+14    49) SIGRTMIN+15    50) SIGRTMAX-14    51) SIGRTMAX-13    52) SIGRTMAX-12
+53) SIGRTMAX-11    54) SIGRTMAX-10    55) SIGRTMAX-9    56) SIGRTMAX-8    57) SIGRTMAX-7
+58) SIGRTMAX-6    59) SIGRTMAX-5    60) SIGRTMAX-4    61) SIGRTMAX-3    62) SIGRTMAX-2
+63) SIGRTMAX-1    64) SIGRTMAX    </code></pre>
+<h3 id="信号的分类"><a href="#信号的分类" class="headerlink" title="信号的分类"></a>信号的分类</h3><p>前32种信号表示非实时信号，是不可靠的，信号不能排队，可能丢失  <br><br>不知道为什么kill列出的信号没有32的值,但在signal.h中是SIGRTMIN=32 </p>
+<pre><code>#define SIGRTMIN        32</code></pre>
+<p>后32个信号表示实时信号，是可靠的，支持排队</p>
+<h3 id="SIGHUP"><a href="#SIGHUP" class="headerlink" title="SIGHUP"></a><code>SIGHUP</code></h3><p>如果终端接口检测到一个连接断开,则将此信号送给与该终端相关的控制进程(会话首进程)。此信号被送给session结构中s_leader字段所指向的进程。仅当终端的CLOCAL标志没有设置时，在上述条件下才产生此信号。(详情以后研究)<br>接到此信号的会话首进程也可能在后台，这区别与由终端正常产生的几个信号(中断，退出和挂起)，这些信号总是传递给前台进程组中的每一个进程<br>如果会话首进程终止，也产生此信号。在这种情况下，此信号送给前台进程组中的每一个进程。<br>通常用此信号通知守护进程再次读取他们的配置文件。选用SIGHUP的理由是，守护进程不会有控制终端，通常绝不会收到此种信号。</p>
+<h3 id="SIGINT"><a href="#SIGINT" class="headerlink" title="SIGINT"></a><code>SIGINT</code></h3><p>当用户按中断键(一般采用DELETE/CRTL+C)时，终端驱动程序产生此信号并发送至前台进程组中的每一个进程。当一个进程在运行时失控，特别是它正在屏幕上产生大量不需要的输出时，常用此信号终止它。<br><code>对后台进程不起作用</code></p>
+<h3 id="SIGQUIT"><a href="#SIGQUIT" class="headerlink" title="SIGQUIT"></a><code>SIGQUIT</code></h3><p>当用户在终端上按退出键(一般采用CTRL+)时，中断驱动程序产生此信号，并发送给前台进程组的所有进程。此信号不仅终止前台进程组(如SIGINT所作的那样)，同时产生一个core文件。<br><code>对后台进程不起作用</code></p>
+<h3 id="SIGILL"><a href="#SIGILL" class="headerlink" title="SIGILL"></a><code>SIGILL</code></h3><p>此信号表示进程已执行一条非法硬件指令。</p>
+<h3 id="SIGTRAP"><a href="#SIGTRAP" class="headerlink" title="SIGTRAP"></a><code>SIGTRAP</code></h3><p>表示一个实现定义的硬件故障 <br></p>
+<blockquote>
+<p>此信号名来自于PDP-11的TRAP指令。当执行断点指令时，实现常用此信号将控制转移至调试程序。<br>gdb有时候会产生此信号,后续研究</p>
+</blockquote>
+<h3 id="SIGABRT"><a href="#SIGABRT" class="headerlink" title="SIGABRT"></a><code>SIGABRT</code></h3><p>调用abort（英 /əˈbɔːt/ ）函数产生此信号，进程异常终止</p>
+<h3 id="SIGBUS"><a href="#SIGBUS" class="headerlink" title="SIGBUS"></a><code>SIGBUS</code></h3><p>表示一个实现定义的硬件故障。当出现某些类型的内存故障时，实现常常产生此信号。<br><br>所述SIGBUS信号被发送到时它会导致一流程总线错误。导致发送信号的条件是例如错误的内存访问对齐或不存在的物理地址。</p>
+<h3 id="SIGALRM"><a href="#SIGALRM" class="headerlink" title="SIGALRM"></a><code>SIGALRM</code></h3><p>在POSIX兼容的平台上，SIGALRM是在定时器终止时发送给进程的信号。它们的符号常量在头文件signal.h中定义。在不同的平台上，信号的编号可能发生变化，因此需要使用符号名称。</p>
+<h3 id="SIGCHLD"><a href="#SIGCHLD" class="headerlink" title="SIGCHLD"></a><code>SIGCHLD</code></h3><p>当某一子进程结束、中断或恢复执行时，内核会发送SIGCHLD信号予其父进程。在默认情况下，父进程会以SIG_IGN函数忽略之</p>
+<h3 id="SIGFPE"><a href="#SIGFPE" class="headerlink" title="SIGFPE"></a>SIGFPE</h3><p>在POSIX兼容的平台上，SIGFPE是当一个进程执行了一个错误的算术操作(除0，浮点溢出)时发送给它的信号。SIGFPE的符号常量在头文件signal.h中定义。因为在不同平台上，信号数字可能变化，因此常使用信号名称</p>
+<h3 id="SIGIO-and-SIGPOLL"><a href="#SIGIO-and-SIGPOLL" class="headerlink" title="SIGIO and SIGPOLL"></a>SIGIO and SIGPOLL</h3><p>当在明确监视的文件描述符上发生事件时，将发送SIGPOLL信号。[14]有效使用它会导致发出异步I / O请求，因为内核将轮询描述符代替调用者。它提供了主动轮询的替代方法。</p>
+<h3 id="SIGPIPE"><a href="#SIGPIPE" class="headerlink" title="SIGPIPE"></a>SIGPIPE</h3><p>SIGPIPE信号在尝试写入管道而没有另一端连接进程时将其发送到进程。</p>
+<h3 id="SIGSEGV"><a href="#SIGSEGV" class="headerlink" title="SIGSEGV"></a>SIGSEGV</h3><p>如果进程尝试访问其虚拟地址空间之外的内存地址，则内核将通过SIGSEGV信号将该冲突通知进程</p>
+<h3 id="SIGKILL"><a href="#SIGKILL" class="headerlink" title="SIGKILL"></a>SIGKILL</h3><p>SIGKILL信号被发送到一个进程，以使其立即终止（kill）。与SIGTERM和SIGINT相比，此信号无法捕获或忽略，并且接收过程在接收到此信号后无法执行任何清理。下列例外情况适用：</p>
+<ul>
+<li>僵尸进程无法被杀死，因为它们已经死亡并且正在等待其父进程获得它们。</li>
+<li>处于阻塞状态的进程只有在再次唤醒后才会消失。</li>
+<li>在初始化过程是特殊的：它没有得到信号，它不希望处理，因此可以忽略SIGKILL。[10]从这个规则的一个例外是当init的ptraced在Linux上。[11] [12]</li>
+<li>一个不可中断睡眠过程中不得终止（并释放其资源）发送SIGKILL也是如此。这是为解决临时软件问题而必须重新引导UNIX系统的少数情况之一。</li>
+</ul>
+<p>如果在大多数系统关闭过程中终止进程，并且没有响应SIGTERM而自动退出，则SIGKILL将用作最后的手段。为了加快计算机关闭过程的速度，Mac OS X 10.6（也称为Snow Leopard）会将SIGKILL发送给标记为“干净”的应用程序，从而缩短了关闭时间，并且没有不良影响。[13]该命令killall -9在Linux中执行时具有类似的危险效果。它不允许程序保存未保存的数据。它具有其他选择，并且没有其他选择使用更安全的SIGTERM信号。</p>
+<h3 id="SIGTERM"><a href="#SIGTERM" class="headerlink" title="SIGTERM"></a>SIGTERM</h3><p>SIGTERM信号被发送到进程以请求终止。与SIGKILL信号不同，该信号可以被过程捕获，解释或忽略。这允许进程执行适当的终止，以释放资源并在适当时保存状态。SIGINT与SIGTERM几乎相同。</p>
+<h3 id="SIGSTOP"><a href="#SIGSTOP" class="headerlink" title="SIGSTOP"></a>SIGSTOP</h3><p>作业控制信号，停止一个进程，不能被捕捉或忽略</p>
+<h3 id="SIGTRAP-1"><a href="#SIGTRAP-1" class="headerlink" title="SIGTRAP"></a>SIGTRAP</h3><p>发生异常（或陷阱）时，将SIGTRAP信号发送到进程：调试器已要求通知的条件-例如，当执行特定功能时，或当特定变量更改值时。 <br><br>当执行断点指令时，实现常用此信号将控制转移到调试程序</p>
+<h3 id="SIGURG"><a href="#SIGURG" class="headerlink" title="SIGURG"></a>SIGURG</h3><p>当套接字具有可读取的紧急或带外数据时，将SIGURG信号发送到进程。</p>
+<h3 id="SIGUSR1-and-SIGUSR2"><a href="#SIGUSR1-and-SIGUSR2" class="headerlink" title="SIGUSR1 and SIGUSR2"></a>SIGUSR1 and SIGUSR2</h3><p>SIGUSR1和SIGUSR2信号被发送到进程以指示用户定义的条件。</p>
+<h2 id="信号处理函数"><a href="#信号处理函数" class="headerlink" title="信号处理函数"></a>信号处理函数</h2><h3 id="Fake-signal-functions"><a href="#Fake-signal-functions" class="headerlink" title="Fake signal functions"></a>Fake signal functions</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Fake signal functions.  */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SIG_ERR ((__sighandler_t) -1) <span class="comment">/* Error return.  */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SIG_DFL ((__sighandler_t) 0) <span class="comment">/* Default action.  */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SIG_IGN ((__sighandler_t) 1) <span class="comment">/* Ignore signal.  */</span></span></span><br></pre></td></tr></table></figure>
+
+<h3 id="signal"><a href="#signal" class="headerlink" title="signal"></a>signal</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Type of a signal handler.  */</span></span><br><span class="line"><span class="function"><span class="keyword">typedef</span> <span class="title">void</span> <span class="params">(*<span class="keyword">__sighandler_t</span>)</span> <span class="params">(<span class="keyword">int</span>)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> __USE_BSD</span></span><br><span class="line"><span class="function"><span class="keyword">extern</span> <span class="keyword">__sighandler_t</span> <span class="title">signal</span> <span class="params">(<span class="keyword">int</span> __sig, <span class="keyword">__sighandler_t</span> __handler)</span></span></span><br></pre></td></tr></table></figure>
+
+<p><strong>DEMO</strong></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;signal.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> std;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">sig</span><span class="params">(<span class="keyword">int</span> signo)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">if</span> (SIGUSR1 == signo)</span><br><span class="line">		cout &lt;&lt; <span class="string">&quot;recv SIGUSR1&quot;</span> &lt;&lt; endl;</span><br><span class="line">	<span class="keyword">else</span> <span class="keyword">if</span> (SIGUSR2 == signo)</span><br><span class="line">		cout &lt;&lt; <span class="string">&quot;recv SIGUSR2&quot;</span> &lt;&lt; endl;</span><br><span class="line">	<span class="keyword">else</span></span><br><span class="line">		cout &lt;&lt; <span class="string">&quot;signal num is &quot;</span> &lt;&lt; signo &lt;&lt; endl;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">if</span> (<span class="built_in">signal</span>(SIGUSR1, sig) == SIG_ERR)</span><br><span class="line">		cout &lt;&lt; <span class="string">&quot;can,t catch SIGUSR1&quot;</span> &lt;&lt; endl;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (<span class="built_in">signal</span>(SIGUSR2, sig) == SIG_ERR)</span><br><span class="line">		cout &lt;&lt; <span class="string">&quot;can,t catch SIGUSR2&quot;</span> &lt;&lt; endl;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span>(<span class="literal">true</span>)</span><br><span class="line">		<span class="built_in">pause</span>();</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<pre><code>[root@localhost signal]# kill -USR1 16747
+[root@localhost signal]# recv SIGUSR1
+^C
+[root@localhost signal]# kill -USR2 16747
+[root@localhost signal]# recv SIGUSR2
+^C</code></pre>
+<h3 id="sigaction"><a href="#sigaction" class="headerlink" title="sigaction"></a>sigaction</h3><h3 id="sigemptyset"><a href="#sigemptyset" class="headerlink" title="sigemptyset"></a>sigemptyset</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//sigemptyset() initializes the signal set given by set to empty, with all signals excluded from the set.</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">sigemptyset</span><span class="params">(<span class="keyword">sigset_t</span> *<span class="built_in">set</span>)</span></span>;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="sigfillset"><a href="#sigfillset" class="headerlink" title="sigfillset"></a>sigfillset</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//sigfillset() initializes set to full, including all signals.</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">sigfillset</span><span class="params">(<span class="keyword">sigset_t</span> *<span class="built_in">set</span>)</span></span>;</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="sigaddset-sigdelset"><a href="#sigaddset-sigdelset" class="headerlink" title="sigaddset/sigdelset"></a>sigaddset/sigdelset</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//sigaddset() and sigdelset() add and delete respectively signal signum from set.</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">sigaddset</span><span class="params">(<span class="keyword">sigset_t</span> *<span class="built_in">set</span>, <span class="keyword">int</span> signum)</span></span>; </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">sigdelset</span><span class="params">(<span class="keyword">sigset_t</span> *<span class="built_in">set</span>, <span class="keyword">int</span> signum)</span></span>;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="sigismember"><a href="#sigismember" class="headerlink" title="sigismember"></a>sigismember</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//sigismember() tests whether signum is a member of set.</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">sigismember</span><span class="params">(<span class="keyword">const</span> <span class="keyword">sigset_t</span> *<span class="built_in">set</span>, <span class="keyword">int</span> signum)</span></span>;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="ending"><a href="#ending" class="headerlink" title="ending"></a>ending</h2><p><img src="https://i.loli.net/2020/01/13/i6X9R4SyIOBTQ71.jpg" alt="sa55_lit.jpg"></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2020-04-07-linux-%E4%BF%A1%E5%8F%B7/" title="信号和信号处理函数">https://riverferry.site/2020-04-07-linux-信号/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/ipc/" rel="tag"><i class="fa fa-tags"></i> ipc</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020-04-07-linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/" rel="prev" title="linux-文件系统">
+      <i class="fa fa-chevron-left"></i> linux-文件系统
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020-04-07-linux-spinlock/" rel="next" title="linux-spinlock">
+      linux-spinlock <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">参考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BF%A1%E5%8F%B7"><span class="nav-number">2.</span> <span class="nav-text">信号</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E4%BF%A1%E5%8F%B7"><span class="nav-number">2.1.</span> <span class="nav-text">常见信号</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BF%A1%E5%8F%B7%E7%9A%84%E5%88%86%E7%B1%BB"><span class="nav-number">2.2.</span> <span class="nav-text">信号的分类</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGHUP"><span class="nav-number">2.3.</span> <span class="nav-text">SIGHUP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGINT"><span class="nav-number">2.4.</span> <span class="nav-text">SIGINT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGQUIT"><span class="nav-number">2.5.</span> <span class="nav-text">SIGQUIT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGILL"><span class="nav-number">2.6.</span> <span class="nav-text">SIGILL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGTRAP"><span class="nav-number">2.7.</span> <span class="nav-text">SIGTRAP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGABRT"><span class="nav-number">2.8.</span> <span class="nav-text">SIGABRT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGBUS"><span class="nav-number">2.9.</span> <span class="nav-text">SIGBUS</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGALRM"><span class="nav-number">2.10.</span> <span class="nav-text">SIGALRM</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGCHLD"><span class="nav-number">2.11.</span> <span class="nav-text">SIGCHLD</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGFPE"><span class="nav-number">2.12.</span> <span class="nav-text">SIGFPE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGIO-and-SIGPOLL"><span class="nav-number">2.13.</span> <span class="nav-text">SIGIO and SIGPOLL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGPIPE"><span class="nav-number">2.14.</span> <span class="nav-text">SIGPIPE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGSEGV"><span class="nav-number">2.15.</span> <span class="nav-text">SIGSEGV</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGKILL"><span class="nav-number">2.16.</span> <span class="nav-text">SIGKILL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGTERM"><span class="nav-number">2.17.</span> <span class="nav-text">SIGTERM</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGSTOP"><span class="nav-number">2.18.</span> <span class="nav-text">SIGSTOP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGTRAP-1"><span class="nav-number">2.19.</span> <span class="nav-text">SIGTRAP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGURG"><span class="nav-number">2.20.</span> <span class="nav-text">SIGURG</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SIGUSR1-and-SIGUSR2"><span class="nav-number">2.21.</span> <span class="nav-text">SIGUSR1 and SIGUSR2</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86%E5%87%BD%E6%95%B0"><span class="nav-number">3.</span> <span class="nav-text">信号处理函数</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Fake-signal-functions"><span class="nav-number">3.1.</span> <span class="nav-text">Fake signal functions</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#signal"><span class="nav-number">3.2.</span> <span class="nav-text">signal</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sigaction"><span class="nav-number">3.3.</span> <span class="nav-text">sigaction</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sigemptyset"><span class="nav-number">3.4.</span> <span class="nav-text">sigemptyset</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sigfillset"><span class="nav-number">3.5.</span> <span class="nav-text">sigfillset</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sigaddset-sigdelset"><span class="nav-number">3.6.</span> <span class="nav-text">sigaddset&#x2F;sigdelset</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sigismember"><span class="nav-number">3.7.</span> <span class="nav-text">sigismember</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ending"><span class="nav-number">4.</span> <span class="nav-text">ending</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : 'b8486c0ffec88137452734e5c5c30300',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

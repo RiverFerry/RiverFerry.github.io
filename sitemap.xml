@@ -1,0 +1,1975 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <url>
+    <loc>https://riverferry.site/tags/index.html</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/about/index.html</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-11-04-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(6)%20%E6%96%87%E4%BB%B6%E5%8E%8B%E7%BC%A9/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-11-05-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(7)%20%E7%89%88%E6%9C%AC%E6%8E%A7%E5%88%B6%20version/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-11-06-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(8)%20%E8%BF%AD%E4%BB%A3%E5%99%A8%20iterator/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-11-07-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(9)%20%E5%AE%8C%E6%95%B4%E7%9A%84%E8%AF%BB%E5%8F%96%E6%B5%81%E7%A8%8B/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-11-08-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(10)%20lru%20cache/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-11-10-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(1x)%20%E6%80%BB%E7%BB%93/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2022-03-30-C++%20std::thread/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2022-03-31-C++%20std::mutex/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2022-04-07-C++%20Storage%20class%20specifiers/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2022-06-27-install%20kubesphere%20on%20k8s/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2022-06-28-install%20linkerd%20on%20k8s%20with%20nginx%20ingress%20control/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2022-08-27-java%20and%20spring%E4%B8%AD%E7%9A%84%E6%B3%A8%E8%A7%A3/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2022-08-31-prometheus+grafana%E5%8D%95%E6%9C%BA%E9%83%A8%E7%BD%B2/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2022-09-02-promql%20%E8%AF%AD%E6%B3%95%E5%AD%A6%E4%B9%A0/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-05-24-c++%20stl%20%E6%8E%92%E5%BA%8F%E6%80%BB%E7%BB%93%20/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-05-24-stl%20priority_queue%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-06-23-1504%20Count%20Submatrices%20With%20All%20Ones%20copy/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-09-01-raft/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-09-03-%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-09-04-mapreduce/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-10-06-centos8%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%8F%8C%E7%BD%91%E5%8D%A1+docker%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0%E7%8E%AF%E5%A2%83/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-10-09-protobuf%20varint%20and%20zigzag/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-10-10-gperftool%E5%88%86%E6%9E%90leveldb%E5%86%85%E5%AD%98%E7%94%B3%E8%AF%B7/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-10-11-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(1)%20%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-10-11-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(2)%20%E6%9E%B6%E6%9E%84%E4%B8%8E%E6%96%87%E4%BB%B6%E5%88%86%E6%9E%90/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-10-12-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(3)%20%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%20Arena/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-10-13-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(4)%20memtable%20and%20log/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-10-27-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(5)%20sstable%E6%96%87%E4%BB%B6/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-02-24-c++%20volatile%20atomic/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-02-24-http%20basis/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-02-25-http-cache/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-02-28-proxy-pass-return/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-03-05-protobuf%20%E6%95%B4%E7%90%86%E5%92%8C%E5%9D%91/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-03-10-2A%20raft%20leader%20election/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-03-17-when-goroutine-quit/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-05-01-%E7%BA%BF%E6%AE%B5%E6%A0%91/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-05-02-%E6%A0%91%E7%8A%B6%E6%95%B0%E7%BB%84/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-05-03-%E7%9F%A9%E9%98%B5%E5%BF%AB%E9%80%9F%E5%B9%82/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-05-04-%E5%B9%B6%E6%9F%A5%E9%9B%86/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-05-05-%E5%9F%BA%E6%95%B0%E6%8E%92%E5%BA%8F+%E8%AE%A1%E6%95%B0%E6%8E%92%E5%BA%8F+%E6%A1%B6%E6%8E%92%E5%BA%8F/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-05-18-windows%E4%B8%8Bvscode%E8%BF%9C%E7%A8%8B%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%20copy/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-02-20-Paxos-Made-Simple/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-02-12-The-Design-of-a-Practical-System-for-Fault-Tolerant-Virtual-Machines/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-01-26-The-Google-File-System/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-11-07-hash%20in%20redis/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2021-01-21-MapReduce-Simplified-Data-Processing-on-Large-Clusters/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-29-golang-sync-once/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-11-03-golang-runtime-sema/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-11-04-golang%20sema%20treap/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-11-04-golang-RWmutex/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-11-05-gin-%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-11-06-redis-sorted-set/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-11-06-skip-list%20in%20redis/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-22-golang-mutex/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-24-bloom-filter/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-26-golang-sync%20map/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-27-golang%20concurrent-map/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-27-golang-atomic-value/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-28-golang%20sync-WaitGroup/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-28-golang-semaphore/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-28-grpc%20%E5%AE%9E%E7%8E%B0/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-29-golang-sync-cond/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-10-golang%E8%BF%9E%E6%8E%A5mysql/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-10-golang%E8%BF%9E%E6%8E%A5redis/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-13-grpc%20hello/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-14-gitlab+github+hexo/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-20-git-%E5%B7%A5%E4%BD%9C%E6%B5%81/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-21-golang-channel/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-21-golang-context/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-19-golang-reflect/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-08-20-mysql%20%E9%94%81%E4%B8%8E%E4%B8%80%E8%87%B4%E6%80%A7%E8%A7%86%E5%9B%BE/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-08-24-c++%20%E8%99%9A%E6%9E%90%E6%9E%84/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-08-24-mysql%20mvcc/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-08-25-mysql%20%E4%BA%8B%E5%8A%A1/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-08-25-mysql%20%E5%B9%BB%E8%AF%BB/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-08-26-mysql%20change%20buffer/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-08-26-mysql%20%E8%84%8F%E8%AF%BB%20%E4%B8%8D%E5%8F%AF%E9%87%8D%E5%A4%8D%E8%AF%BB/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-08-29-%E6%95%B0%E6%8D%AE%E5%BA%93%20%E8%8C%83%E5%BC%8F/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-09-01-mysql%20%E7%B4%A2%E5%BC%95/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-09-01-%E7%BD%91%E7%BB%9C%20https%E5%8E%9F%E7%90%86/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-09-02-redis%20%E5%AE%89%E8%A3%85/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-09-25-redis-%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-09-29-golang%20%E6%96%B9%E6%B3%95%E5%92%8C%E5%B5%8C%E5%85%A5/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-09-30-golang%20%E6%8E%A5%E5%8F%A3/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-10-09-sql%20%E7%AA%97%E5%8F%A3%E5%87%BD%E6%95%B0/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-08-20-mysql%20%E8%87%AA%E5%A2%9E%E4%B8%BB%E9%94%AE/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-20-%E6%88%90%E5%91%98%E5%87%BD%E6%95%B0%E6%8C%87%E9%92%88/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-26-training/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-27-mysql-%E5%AE%89%E8%A3%85/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-28-golang%20routine/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-30-mysql%20%E7%B4%A2%E5%BC%95/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-08-20-mysql%20binlog/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-08-20-mysql%20slow%20log/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-27-c++%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-09-unix%E5%9F%9F%E5%A5%97%E6%8E%A5%E5%AD%97/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-12-enum%20class/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-12-override%20final/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-12-typedef%20using/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-13-constexpr/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-13-noexcept/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-14-move%20forward/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-15-%E7%89%B9%E6%AE%8A%E6%88%90%E5%91%98%E5%87%BD%E6%95%B0/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-16-function%20bind/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-16-%E5%AE%8C%E7%BE%8E%E8%BD%AC%E5%8F%91%E5%A4%B1%E8%B4%A5%E5%9C%BA%E6%99%AF/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-16-%E6%A8%A1%E6%9D%BF%E7%89%B9%E5%8C%96%20SFINAE/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-17-enum%20hack/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-17-tuple%20underlying_type/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-24-%E5%B8%B8%E9%87%8F%E6%8A%98%E5%8F%A0/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-05-16-%E7%BA%A2%E9%BB%91%E6%A0%91/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-05-23-%E4%BA%8C%E5%8F%89%E6%90%9C%E7%B4%A2%E6%A0%91/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-05-24-%E5%93%88%E5%B8%8C%E8%A1%A8/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-05-c++11-delete_default/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-05-copy_and_swap/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-05-emplace_back/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-05-rule%20of%20three-five-zero/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-06-make_pair/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-07-rvo_copy_elision/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-09-c++%20shared_ptr%20weak_ptr/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-09-c++11%20auto_ptr%20unique_ptr/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-07-09-c++11%E7%B1%BB%E5%9E%8B%E6%8E%A8%E5%AF%BC/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-%E7%B1%BB%E5%AF%B9%E8%B1%A1%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-10-null%E5%92%8Cnullptr/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-11-c++11%E5%8F%B3%E5%80%BC%E5%BC%95%E7%94%A8/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-12-linux-%E7%AE%A1%E9%81%93%E5%92%8CFIFO/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-13-linux-%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-17-singleton%E6%A8%A1%E5%BC%8F/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-20-snprintf%E8%BF%94%E5%9B%9E%E5%80%BC/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-21-list%E7%9A%84splice%E4%B8%8Esize/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-22-nagle%E7%AE%97%E6%B3%95%E5%92%8C%E5%BB%B6%E8%BF%9F%E7%A1%AE%E8%AE%A4/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-19-%E5%8D%8F%E7%A8%8B/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-linux-posxi%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-linux-spinlock/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-linux-%E4%BF%A1%E5%8F%B7/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-mmap%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-linux-posix%E4%BF%A1%E5%8F%B7%E9%87%8F/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-linux-posix%E4%BA%92%E6%96%A5%E9%94%81%E5%92%8C%E6%9D%A1%E4%BB%B6%E5%8F%98%E9%87%8F%20/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-24-webbench/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-24-%E5%AD%97%E8%8A%82%E5%AF%B9%E9%BD%90/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-28-%E5%8D%8E%E4%B8%BA%E6%9C%BA%E8%AF%951-30/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-29-%E8%B0%B7%E6%AD%8C%E4%BA%91%E6%90%AD%E5%BB%BAv2ray/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-04-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E8%BF%9B%E7%A8%8B%E4%BA%92%E6%96%A5%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%96%B9%E6%A1%88/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-EPOLLONESHOT/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-dns%E8%A7%A3%E6%9E%90/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-04-07-linux-1%E5%8F%B7%E8%BF%9B%E7%A8%8B/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-29-c++%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-17-itchat%E6%9E%84%E5%BB%BA%E5%BE%AE%E4%BF%A1%E8%87%AA%E5%8A%A8%E5%9B%9E%E5%A4%8D/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-19-%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-20-%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-21-c++11%E5%9B%9B%E7%A7%8Dcast%E8%BD%AC%E6%8D%A2/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-22-Linux-fork%E5%92%8Cclone/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-23-epoll%E6%83%8A%E7%BE%A4/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-23-sizeof/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-23-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E8%99%9A%E6%8B%9F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-24-linux-waitqueue/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-10-vs+linux%E7%BC%96%E8%AF%91%E7%8E%AF%E5%A2%83/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-16-ace-%E7%AE%80%E5%8D%95%E7%9A%84server-client/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-16-ace%E5%9C%A8vs%E4%B8%8B%E7%BC%96%E8%AF%91/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-16-stl-reverse_iterator/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-09-select-poll/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-07-epoll%E7%9A%84%E6%BA%90%E7%A0%81/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-09-stl-vector%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-02-26-epoll%E7%9A%84%E5%8E%9F%E7%90%86/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-02-26-%E5%90%8C%E6%AD%A5,%E5%BC%82%E6%AD%A5,%E9%98%BB%E5%A1%9E,%E9%9D%9E%E9%98%BB%E5%A1%9E/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-02-28-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E4%B8%AD%E6%96%AD%E5%92%8C%E5%BC%82%E5%B8%B8/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-02-28-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-02-29-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B-%E5%8E%9F%E7%90%86/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-03-04-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E5%A4%84%E7%90%86%E5%99%A8%E8%B0%83%E5%BA%A6/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-12-02-nginx%E5%BC%80%E7%AF%87%E5%92%8C%E5%AE%89%E8%A3%85/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-12-03-ping%E6%90%BA%E5%B8%A6%E6%97%B6%E9%97%B4%E4%BF%A1%E6%81%AF-NTP%E6%97%B6%E9%97%B4%E5%90%8C%E6%AD%A5%E6%8A%A5%E9%94%99-vmware%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%85%8B%E9%9A%86%E6%8A%A5%E9%94%99/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-12-05-linux%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-12-10-nginx%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-main/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-12-25-%E7%BC%96%E7%A0%81%E6%A0%BC%E5%BC%8Futf8-gbk/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-12-26-%E7%BC%96%E8%A7%A3%E7%A0%81%E5%87%BD%E6%95%B0/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-01-14-cgdb%E5%AE%89%E8%A3%85/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-01-14-gdb%E8%BF%9B%E9%98%B6/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-01-15-http%E5%8D%8F%E8%AE%AE/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-01-15-sip%E5%8D%8F%E8%AE%AE/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2020-01-18-nginx-%E9%85%8D%E7%BD%AE%E9%9D%99%E6%80%81%E7%BD%91%E9%A1%B5/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-12-16-nginx%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-%E5%86%85%E5%AD%98%E6%B1%A0/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-07-30-%E9%A2%98%E5%BA%93/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-08-04-%E6%8E%92%E5%BA%8F/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-10-09-%E4%BA%BA%E9%97%B4%E5%80%BC%E5%BE%97/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-10-13-lua-%E9%97%AD%E5%8C%85/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-10-14-lua-%E8%BF%AD%E4%BB%A3%E5%99%A8%E4%B8%8E%E8%8C%83%E6%80%A7for/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-10-22-lua-%E7%BC%96%E8%AF%91-%E8%BF%90%E8%A1%8C-%E8%B0%83%E8%AF%95/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-11-05-lua-%E5%8D%8F%E7%A8%8B/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-11-21-%E4%B8%80%E6%AC%A1%E7%9F%AD%E6%9A%82%E7%9A%84%E9%80%83%E7%A6%BB/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-07-31-%E7%90%86%E8%A7%A3%E5%B9%B3%E5%9D%87%E8%B4%9F%E8%BD%BD/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-05-17-POE%E7%9B%B8%E6%9C%BA%E7%9A%84%E9%85%8D%E7%BD%AE/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-05-30-%E4%BA%BA%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E6%82%B2%E4%BC%A4/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-06-03-gsoap%E7%9A%84%E5%AE%89%E8%A3%85%20-%20%E5%89%AF%E6%9C%AC/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-06-17-rtsp_digest%E5%8A%A0%E8%A7%A3%E5%AF%86/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-06-24-wireshark%E5%88%87%E5%89%B2%E6%8A%A5%E6%96%87/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-06-30-Tcp_keepalive/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-07-05-Tcp%E6%8F%A1%E6%89%8B%E6%B5%81%E7%A8%8B/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-07-08-listen%E7%9A%84backup%E5%8F%82%E6%95%B0/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-07-15-gsoap%E6%B7%BB%E5%8A%A0header/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-07-17-sipp%E6%80%BB%E7%BB%93/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-07-30-TheRiver%E7%9A%84%E7%94%B1%E6%9D%A5/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/1999-01-23-%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/1999-01-24-lockfree%20queue/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/1999-01-25-zero%20copy/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/1999-02-15-c++%20%E5%8F%8D%E5%B0%84/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-04-15-%E6%9C%80%E5%BC%80%E5%A7%8B%E7%9A%84%E5%9C%B0%E6%96%B9/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-04-21-postgresql%E7%9B%B8%E5%85%B3/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-04-27-%E6%AD%A3%E5%88%99%E8%A1%A8%E8%BE%BE%E5%BC%8F%E5%9F%BA%E7%A1%80/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-05-05-%E5%8F%A5%E6%9F%84%E6%B3%84%E9%9C%B2%E7%9A%84%E5%AE%9A%E4%BD%8D%E8%BF%87%E7%A8%8B/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/2019-05-11-%E6%96%87%E4%BB%B6%E5%AE%A1%E8%AE%A1auditd/</loc>
+    
+    <lastmod>2022-09-12</lastmod>
+    
+  </url>
+  
+
+  <url>
+    <loc>https://riverferry.site/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E5%88%86%E5%B8%83%E5%BC%8F/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/mq/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/linux/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/c/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E6%97%A5%E8%AE%B0/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E8%AF%AD%E6%B3%95/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E8%BF%90%E7%BB%B4/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E8%A7%86%E9%A2%91/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/gsoap/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E5%8A%A0%E5%AF%86/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E7%BD%91%E7%BB%9C/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/onvif/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/sip/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/River/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/work/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/note/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/lua/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E5%9D%91/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/nginx/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/encoding-format/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/gdb/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/epoll/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/IO/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/OperatingSystem/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/tool/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/ace/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/stl/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/python/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/TCP/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/c-11/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/IO%E5%A4%8D%E7%94%A8/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/sizeof/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E7%AC%94%E8%AF%95/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E7%A7%91%E5%AD%A6%E4%B8%8A%E7%BD%91/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/ipc/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/dump/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/tcp/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/unix/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E9%9D%A2%E8%AF%95/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/mysql/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/redis/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/golang/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/grpc/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/gitlab/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/hexo/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/github/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/blog/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/proto/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/raft/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/vscode/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E7%AE%97%E6%B3%95/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/leetcode/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/centos/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/protobuf/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/leveldb/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/gperftool/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/k8s/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/linkerd/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/java/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/spring/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/prometheus/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/grafana/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/promql/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://riverferry.site/tags/%E5%B9%B6%E5%8F%91/</loc>
+    <lastmod>2022-09-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+
+  
+</urlset>

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="项目有用到leveldb,打算最近看看源码，整理个系列文章，这是第8篇迭代器 iterator。源码注释地址">
+<meta property="og:type" content="article">
+<meta property="og:title" content="leveldb源码分析(8) 迭代器 iterator">
+<meta property="og:url" content="https://riverferry.site/2021-11-06-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(8)%20%E8%BF%AD%E4%BB%A3%E5%99%A8%20iterator/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="项目有用到leveldb,打算最近看看源码，整理个系列文章，这是第8篇迭代器 iterator。源码注释地址">
+<meta property="og:locale">
+<meta property="article:published_time" content="2021-11-06T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.294Z">
+<meta property="article:author" content="TheRiver">
+<meta property="article:tag" content="leveldb">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://riverferry.site/2021-11-06-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(8)%20%E8%BF%AD%E4%BB%A3%E5%99%A8%20iterator/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>leveldb源码分析(8) 迭代器 iterator | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2021-11-06-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(8)%20%E8%BF%AD%E4%BB%A3%E5%99%A8%20iterator/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          leveldb源码分析(8) 迭代器 iterator
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-11-06 00:00:00" itemprop="dateCreated datePublished" datetime="2021-11-06T00:00:00+00:00">2021-11-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>11k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>10 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div class="note default">
+            <p>项目有用到leveldb,打算最近看看源码，整理个系列文章，这是第8篇迭代器 iterator。<a target="_blank" rel="noopener" href="https://github.com/RiverFerry/leveldb-learn-log">源码注释地址</a></p>
+          </div>
+
+
+<a id="more"></a>
+
+<h2 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h2><p>纯基类的定义：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">LEVELDB_EXPORT</span> <span class="title">Iterator</span> &#123;</span></span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  <span class="built_in">Iterator</span>();</span><br><span class="line">  <span class="built_in">Iterator</span>(<span class="keyword">const</span> Iterator&amp;) = <span class="keyword">delete</span>;</span><br><span class="line">  Iterator&amp; <span class="keyword">operator</span>=(<span class="keyword">const</span> Iterator&amp;) = <span class="keyword">delete</span>;</span><br><span class="line">  <span class="keyword">virtual</span> ~<span class="built_in">Iterator</span>();</span><br><span class="line">  <span class="function"><span class="keyword">virtual</span> <span class="keyword">bool</span> <span class="title">Valid</span><span class="params">()</span> <span class="keyword">const</span> </span>= <span class="number">0</span>;</span><br><span class="line">  <span class="function"><span class="keyword">virtual</span> <span class="keyword">void</span> <span class="title">SeekToFirst</span><span class="params">()</span> </span>= <span class="number">0</span>;</span><br><span class="line">  <span class="function"><span class="keyword">virtual</span> <span class="keyword">void</span> <span class="title">SeekToLast</span><span class="params">()</span> </span>= <span class="number">0</span>;</span><br><span class="line">  <span class="function"><span class="keyword">virtual</span> <span class="keyword">void</span> <span class="title">Seek</span><span class="params">(<span class="keyword">const</span> Slice&amp; target)</span> </span>= <span class="number">0</span>;</span><br><span class="line">  <span class="function"><span class="keyword">virtual</span> <span class="keyword">void</span> <span class="title">Next</span><span class="params">()</span> </span>= <span class="number">0</span>;</span><br><span class="line">  <span class="function"><span class="keyword">virtual</span> <span class="keyword">void</span> <span class="title">Prev</span><span class="params">()</span> </span>= <span class="number">0</span>;</span><br><span class="line">  <span class="function"><span class="keyword">virtual</span> Slice <span class="title">key</span><span class="params">()</span> <span class="keyword">const</span> </span>= <span class="number">0</span>;</span><br><span class="line">  <span class="function"><span class="keyword">virtual</span> Slice <span class="title">value</span><span class="params">()</span> <span class="keyword">const</span> </span>= <span class="number">0</span>;</span><br><span class="line">  <span class="function"><span class="keyword">virtual</span> Status <span class="title">status</span><span class="params">()</span> <span class="keyword">const</span> </span>= <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">using</span> CleanupFunction = <span class="built_in"><span class="keyword">void</span></span> (*)(<span class="keyword">void</span>* arg1, <span class="keyword">void</span>* arg2);</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">RegisterCleanup</span><span class="params">(CleanupFunction function, <span class="keyword">void</span>* arg1, <span class="keyword">void</span>* arg2)</span></span>;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">private</span>:</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">CleanupNode</span> &#123;</span></span><br><span class="line">    <span class="function"><span class="keyword">bool</span> <span class="title">IsEmpty</span><span class="params">()</span> <span class="keyword">const</span> </span>&#123; <span class="keyword">return</span> function == <span class="literal">nullptr</span>; &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">      <span class="built_in">assert</span>(function != <span class="literal">nullptr</span>);</span><br><span class="line">      (*function)(arg1, arg2);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    CleanupFunction function;</span><br><span class="line">    <span class="keyword">void</span>* arg1;</span><br><span class="line">    <span class="keyword">void</span>* arg2;</span><br><span class="line">    CleanupNode* next;</span><br><span class="line">  &#125;;</span><br><span class="line">  CleanupNode cleanup_head_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>涉及的子类：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">class MemTableIterator : public Iterator</span><br><span class="line">class DBIter : public Iterator</span><br><span class="line">class ModelIter : public Iterator</span><br><span class="line">class Version::LevelFileNumIterator : public Iterator</span><br><span class="line">class Block::Iter : public Iterator</span><br><span class="line">class EmptyIterator : public Iterator</span><br><span class="line">class MergingIterator : public Iterator</span><br><span class="line">class KeyConvertingIterator : public Iterator</span><br><span class="line">class TwoLevelIterator : public Iterator</span><br></pre></td></tr></table></figure>
+
+<h3 id="MemTableIterator"><a href="#MemTableIterator" class="headerlink" title="MemTableIterator"></a>MemTableIterator</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 对跳表的iterator进行了简单的封装</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MemTableIterator</span> :</span> <span class="keyword">public</span> Iterator &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line"> <span class="keyword">private</span>:</span><br><span class="line">  MemTable::Table::Iterator iter_;</span><br><span class="line">  std::string tmp_;  <span class="comment">// For passing to EncodeKey</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>就是封装了MemTable::Table::Iterator，也就是skiplist的封装，skiplist的构造见<a href="https://riverferry.site/2021-10-13-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(4)%20memtable%20and%20log/">https://riverferry.site/2021-10-13-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(4)%20memtable%20and%20log/</a></p>
+<h3 id="DBIter"><a href="#DBIter" class="headerlink" title="DBIter"></a>DBIter</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Memtables and sstables that make the DB representation contain</span></span><br><span class="line"><span class="comment">// (userkey,seq,type) =&gt; uservalue entries.  DBIter</span></span><br><span class="line"><span class="comment">// combines multiple entries for the same userkey found in the DB</span></span><br><span class="line"><span class="comment">// representation into a single entry while accounting for sequence</span></span><br><span class="line"><span class="comment">// numbers, deletion markers, overwrites, etc.</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">DBIter</span> :</span> <span class="keyword">public</span> Iterator &#123;</span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  <span class="comment">// Which direction is the iterator currently moving?</span></span><br><span class="line">  <span class="comment">// (1) When moving forward, the internal iterator is positioned at</span></span><br><span class="line">  <span class="comment">//     the exact entry that yields this-&gt;key(), this-&gt;value()</span></span><br><span class="line">  <span class="comment">// (2) When moving backwards, the internal iterator is positioned</span></span><br><span class="line">  <span class="comment">//     just before all entries whose user key == this-&gt;key().</span></span><br><span class="line">  <span class="class"><span class="keyword">enum</span> <span class="title">Direction</span> &#123;</span> kForward, kReverse &#125;;</span><br><span class="line"></span><br><span class="line">  <span class="built_in">DBIter</span>(DBImpl* db, <span class="keyword">const</span> Comparator* cmp, Iterator* iter, SequenceNumber s,</span><br><span class="line">         <span class="keyword">uint32_t</span> seed)</span><br><span class="line">      : <span class="built_in">db_</span>(db),</span><br><span class="line">        <span class="built_in">user_comparator_</span>(cmp),</span><br><span class="line">        <span class="built_in">iter_</span>(iter),</span><br><span class="line">        <span class="built_in">sequence_</span>(s),</span><br><span class="line">        <span class="built_in">direction_</span>(kForward),</span><br><span class="line">        <span class="built_in">valid_</span>(<span class="literal">false</span>),</span><br><span class="line">        <span class="built_in">rnd_</span>(seed),</span><br><span class="line">        <span class="built_in">bytes_until_read_sampling_</span>(<span class="built_in">RandomCompactionPeriod</span>()) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  <span class="built_in">DBIter</span>(<span class="keyword">const</span> DBIter&amp;) = <span class="keyword">delete</span>;</span><br><span class="line">  DBIter&amp; <span class="keyword">operator</span>=(<span class="keyword">const</span> DBIter&amp;) = <span class="keyword">delete</span>;</span><br><span class="line"></span><br><span class="line">  ~<span class="built_in">DBIter</span>() <span class="keyword">override</span> &#123; <span class="keyword">delete</span> iter_; &#125;</span><br><span class="line">  <span class="function"><span class="keyword">bool</span> <span class="title">Valid</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> valid_; &#125;</span><br><span class="line">  <span class="function">Slice <span class="title">key</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(valid_);</span><br><span class="line">    <span class="keyword">return</span> (direction_ == kForward) ? <span class="built_in">ExtractUserKey</span>(iter_-&gt;<span class="built_in">key</span>()) : saved_key_;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">Slice <span class="title">value</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(valid_);</span><br><span class="line">    <span class="keyword">return</span> (direction_ == kForward) ? iter_-&gt;<span class="built_in">value</span>() : saved_value_;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">Status <span class="title">status</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (status_.<span class="built_in">ok</span>()) &#123;</span><br><span class="line">      <span class="keyword">return</span> iter_-&gt;<span class="built_in">status</span>();</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">return</span> status_;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Next</span><span class="params">()</span> <span class="keyword">override</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Prev</span><span class="params">()</span> <span class="keyword">override</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Seek</span><span class="params">(<span class="keyword">const</span> Slice&amp; target)</span> <span class="keyword">override</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SeekToFirst</span><span class="params">()</span> <span class="keyword">override</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SeekToLast</span><span class="params">()</span> <span class="keyword">override</span></span>;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">private</span>:</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">FindNextUserEntry</span><span class="params">(<span class="keyword">bool</span> skipping, std::string* skip)</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">FindPrevUserEntry</span><span class="params">()</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">bool</span> <span class="title">ParseKey</span><span class="params">(ParsedInternalKey* key)</span></span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">void</span> <span class="title">SaveKey</span><span class="params">(<span class="keyword">const</span> Slice&amp; k, std::string* dst)</span> </span>&#123;</span><br><span class="line">    dst-&gt;<span class="built_in">assign</span>(k.<span class="built_in">data</span>(), k.<span class="built_in">size</span>());</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">void</span> <span class="title">ClearSavedValue</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (saved_value_.<span class="built_in">capacity</span>() &gt; <span class="number">1048576</span>) &#123;</span><br><span class="line">      std::string empty;</span><br><span class="line">      <span class="built_in">swap</span>(empty, saved_value_);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      saved_value_.<span class="built_in">clear</span>();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Picks the number of bytes that can be read until a compaction is scheduled.</span></span><br><span class="line">  <span class="function"><span class="keyword">size_t</span> <span class="title">RandomCompactionPeriod</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> rnd_.<span class="built_in">Uniform</span>(<span class="number">2</span> * config::kReadBytesPeriod);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  DBImpl* db_;</span><br><span class="line">  <span class="keyword">const</span> Comparator* <span class="keyword">const</span> user_comparator_;</span><br><span class="line">  Iterator* <span class="keyword">const</span> iter_;</span><br><span class="line">  SequenceNumber <span class="keyword">const</span> sequence_;</span><br><span class="line">  Status status_;</span><br><span class="line">  std::string saved_key_;    <span class="comment">// == current key when direction_==kReverse</span></span><br><span class="line">  std::string saved_value_;  <span class="comment">// == current raw value when direction_==kReverse</span></span><br><span class="line">  Direction direction_;</span><br><span class="line">  <span class="keyword">bool</span> valid_;</span><br><span class="line">  Random rnd_;</span><br><span class="line">  <span class="keyword">size_t</span> bytes_until_read_sampling_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="Version-LevelFileNumIterator"><a href="#Version-LevelFileNumIterator" class="headerlink" title="Version::LevelFileNumIterator"></a>Version::LevelFileNumIterator</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// An internal iterator.  For a given version/level pair, yields</span></span><br><span class="line"><span class="comment">// information about the files in the level.  For a given entry, key()</span></span><br><span class="line"><span class="comment">// is the largest key that occurs in the file, and value() is an</span></span><br><span class="line"><span class="comment">// 16-byte value containing the file number and file size, both</span></span><br><span class="line"><span class="comment">// encoded using EncodeFixed64.</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Version</span>:</span>:LevelFileNumIterator : <span class="keyword">public</span> Iterator &#123;</span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  <span class="built_in">LevelFileNumIterator</span>(<span class="keyword">const</span> InternalKeyComparator&amp; icmp,</span><br><span class="line">                       <span class="keyword">const</span> std::vector&lt;FileMetaData*&gt;* flist)</span><br><span class="line">      : <span class="built_in">icmp_</span>(icmp), <span class="built_in">flist_</span>(flist), <span class="built_in">index_</span>(flist-&gt;<span class="built_in">size</span>()) &#123;  <span class="comment">// Marks as invalid</span></span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function"><span class="keyword">bool</span> <span class="title">Valid</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> index_ &lt; flist_-&gt;<span class="built_in">size</span>(); &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Seek</span><span class="params">(<span class="keyword">const</span> Slice&amp; target)</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    index_ = <span class="built_in">FindFile</span>(icmp_, *flist_, target);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SeekToFirst</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123; index_ = <span class="number">0</span>; &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SeekToLast</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    index_ = flist_-&gt;<span class="built_in">empty</span>() ? <span class="number">0</span> : flist_-&gt;<span class="built_in">size</span>() - <span class="number">1</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Next</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(<span class="built_in">Valid</span>());</span><br><span class="line">    index_++;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Prev</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(<span class="built_in">Valid</span>());</span><br><span class="line">    <span class="keyword">if</span> (index_ == <span class="number">0</span>) &#123;</span><br><span class="line">      index_ = flist_-&gt;<span class="built_in">size</span>();  <span class="comment">// Marks as invalid</span></span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      index_--;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">Slice <span class="title">key</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(<span class="built_in">Valid</span>());</span><br><span class="line">    <span class="keyword">return</span> (*flist_)[index_]-&gt;largest.<span class="built_in">Encode</span>();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">Slice <span class="title">value</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(<span class="built_in">Valid</span>());</span><br><span class="line">    <span class="built_in">EncodeFixed64</span>(value_buf_, (*flist_)[index_]-&gt;number);</span><br><span class="line">    <span class="built_in">EncodeFixed64</span>(value_buf_ + <span class="number">8</span>, (*flist_)[index_]-&gt;file_size);</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">Slice</span>(value_buf_, <span class="built_in"><span class="keyword">sizeof</span></span>(value_buf_));</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">Status <span class="title">status</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> Status::<span class="built_in">OK</span>(); &#125;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">private</span>:</span><br><span class="line">  <span class="keyword">const</span> InternalKeyComparator icmp_;</span><br><span class="line">  <span class="keyword">const</span> std::vector&lt;FileMetaData*&gt;* <span class="keyword">const</span> flist_;</span><br><span class="line">  <span class="keyword">uint32_t</span> index_;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Backing store for value().  Holds the file number and size.</span></span><br><span class="line">  <span class="keyword">mutable</span> <span class="keyword">char</span> value_buf_[<span class="number">16</span>];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>flist_用vector保存了这一层所有的sst文件。index_作为迭代器当前指向的位置，value返回16字节的字符串，包含sst文件的编号和大小，key返回sst文件的最大内部key</p>
+<hr>
+<h3 id="TwoLevelIterator"><a href="#TwoLevelIterator" class="headerlink" title="TwoLevelIterator"></a>TwoLevelIterator</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">TwoLevelIterator</span> :</span> <span class="keyword">public</span> Iterator &#123;</span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  <span class="built_in">TwoLevelIterator</span>(Iterator* index_iter, BlockFunction block_function,</span><br><span class="line">                   <span class="keyword">void</span>* arg, <span class="keyword">const</span> ReadOptions&amp; options);</span><br><span class="line"></span><br><span class="line">  ~<span class="built_in">TwoLevelIterator</span>() <span class="keyword">override</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Seek</span><span class="params">(<span class="keyword">const</span> Slice&amp; target)</span> <span class="keyword">override</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SeekToFirst</span><span class="params">()</span> <span class="keyword">override</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SeekToLast</span><span class="params">()</span> <span class="keyword">override</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Next</span><span class="params">()</span> <span class="keyword">override</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Prev</span><span class="params">()</span> <span class="keyword">override</span></span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">bool</span> <span class="title">Valid</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> data_iter_.<span class="built_in">Valid</span>(); &#125;</span><br><span class="line">  <span class="function">Slice <span class="title">key</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(<span class="built_in">Valid</span>());</span><br><span class="line">    <span class="keyword">return</span> data_iter_.<span class="built_in">key</span>();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">Slice <span class="title">value</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(<span class="built_in">Valid</span>());</span><br><span class="line">    <span class="keyword">return</span> data_iter_.<span class="built_in">value</span>();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">Status <span class="title">status</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="comment">// It&#x27;d be nice if status() returned a const Status&amp; instead of a Status</span></span><br><span class="line">    <span class="keyword">if</span> (!index_iter_.<span class="built_in">status</span>().<span class="built_in">ok</span>()) &#123;</span><br><span class="line">      <span class="keyword">return</span> index_iter_.<span class="built_in">status</span>();</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (data_iter_.<span class="built_in">iter</span>() != <span class="literal">nullptr</span> &amp;&amp; !data_iter_.<span class="built_in">status</span>().<span class="built_in">ok</span>()) &#123;</span><br><span class="line">      <span class="keyword">return</span> data_iter_.<span class="built_in">status</span>();</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">return</span> status_;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">private</span>:</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SaveError</span><span class="params">(<span class="keyword">const</span> Status&amp; s)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (status_.<span class="built_in">ok</span>() &amp;&amp; !s.<span class="built_in">ok</span>()) status_ = s;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SkipEmptyDataBlocksForward</span><span class="params">()</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SkipEmptyDataBlocksBackward</span><span class="params">()</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SetDataIterator</span><span class="params">(Iterator* data_iter)</span></span>;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">InitDataBlock</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">  BlockFunction block_function_;</span><br><span class="line">  <span class="keyword">void</span>* arg_;</span><br><span class="line">  <span class="keyword">const</span> ReadOptions options_;</span><br><span class="line">  Status status_;</span><br><span class="line">  IteratorWrapper index_iter_;</span><br><span class="line">  IteratorWrapper data_iter_;  <span class="comment">// May be nullptr</span></span><br><span class="line">  <span class="comment">// If data_iter_ is non-null, then &quot;data_block_handle_&quot; holds the</span></span><br><span class="line">  <span class="comment">// &quot;index_value&quot; passed to block_function_ to create the data_iter_.</span></span><br><span class="line">  std::string data_block_handle_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>关键是data_iter_和index_iter_,后面补充</p>
+<hr>
+<h3 id="Block-Iter"><a href="#Block-Iter" class="headerlink" title="Block::Iter"></a>Block::Iter</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Block</span> &#123;</span></span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  <span class="comment">// Initialize the block with the specified contents.</span></span><br><span class="line">  <span class="function"><span class="keyword">explicit</span> <span class="title">Block</span><span class="params">(<span class="keyword">const</span> BlockContents&amp; contents)</span></span>;</span><br><span class="line"></span><br><span class="line">  <span class="built_in">Block</span>(<span class="keyword">const</span> Block&amp;) = <span class="keyword">delete</span>;</span><br><span class="line">  Block&amp; <span class="keyword">operator</span>=(<span class="keyword">const</span> Block&amp;) = <span class="keyword">delete</span>;</span><br><span class="line"></span><br><span class="line">  ~<span class="built_in">Block</span>();</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">size_t</span> <span class="title">size</span><span class="params">()</span> <span class="keyword">const</span> </span>&#123; <span class="keyword">return</span> size_; &#125;</span><br><span class="line">  <span class="function">Iterator* <span class="title">NewIterator</span><span class="params">(<span class="keyword">const</span> Comparator* comparator)</span></span>;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">private</span>:</span><br><span class="line">  <span class="class"><span class="keyword">class</span> <span class="title">Iter</span>;</span></span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">uint32_t</span> <span class="title">NumRestarts</span><span class="params">()</span> <span class="keyword">const</span></span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">const</span> <span class="keyword">char</span>* data_;</span><br><span class="line">  <span class="keyword">size_t</span> size_;</span><br><span class="line">  <span class="keyword">uint32_t</span> restart_offset_;  <span class="comment">// Offset in data_ of restart array</span></span><br><span class="line">  <span class="keyword">bool</span> owned_;               <span class="comment">// Block owns data_[]</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>其中的Iter：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">class Block::Iter : public Iterator &#123;</span><br><span class="line">    &#x2F;&#x2F; ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="EmptyIterator"><a href="#EmptyIterator" class="headerlink" title="EmptyIterator"></a>EmptyIterator</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">EmptyIterator</span> :</span> <span class="keyword">public</span> Iterator &#123;</span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  <span class="built_in">EmptyIterator</span>(<span class="keyword">const</span> Status&amp; s) : <span class="built_in">status_</span>(s) &#123;&#125;</span><br><span class="line">  ~<span class="built_in">EmptyIterator</span>() <span class="keyword">override</span> = <span class="keyword">default</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">bool</span> <span class="title">Valid</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> <span class="literal">false</span>; &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Seek</span><span class="params">(<span class="keyword">const</span> Slice&amp; target)</span> <span class="keyword">override</span> </span>&#123;&#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SeekToFirst</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123;&#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SeekToLast</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123;&#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Next</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123; <span class="built_in">assert</span>(<span class="literal">false</span>); &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Prev</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123; <span class="built_in">assert</span>(<span class="literal">false</span>); &#125;</span><br><span class="line">  <span class="function">Slice <span class="title">key</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(<span class="literal">false</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">Slice</span>();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">Slice <span class="title">value</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(<span class="literal">false</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">Slice</span>();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">Status <span class="title">status</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> status_; &#125;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">private</span>:</span><br><span class="line">  Status status_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>暂时不知道这个有啥用，后面见到了再补充</p>
+<hr>
+<h3 id="MergingIterator"><a href="#MergingIterator" class="headerlink" title="MergingIterator"></a>MergingIterator</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MergingIterator</span> :</span> <span class="keyword">public</span> Iterator &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>后面补充</p>
+<hr>
+<h3 id="KeyConvertingIterator"><a href="#KeyConvertingIterator" class="headerlink" title="KeyConvertingIterator"></a>KeyConvertingIterator</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// A helper class that converts internal format keys into user keys</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">KeyConvertingIterator</span> :</span> <span class="keyword">public</span> Iterator &#123;</span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  <span class="function"><span class="keyword">explicit</span> <span class="title">KeyConvertingIterator</span><span class="params">(Iterator* iter)</span> : iter_(iter) &#123;</span>&#125;</span><br><span class="line"></span><br><span class="line">  <span class="built_in">KeyConvertingIterator</span>(<span class="keyword">const</span> KeyConvertingIterator&amp;) = <span class="keyword">delete</span>;</span><br><span class="line">  KeyConvertingIterator&amp; <span class="keyword">operator</span>=(<span class="keyword">const</span> KeyConvertingIterator&amp;) = <span class="keyword">delete</span>;</span><br><span class="line"></span><br><span class="line">  ~<span class="built_in">KeyConvertingIterator</span>() <span class="keyword">override</span> &#123; <span class="keyword">delete</span> iter_; &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">bool</span> <span class="title">Valid</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> iter_-&gt;<span class="built_in">Valid</span>(); &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Seek</span><span class="params">(<span class="keyword">const</span> Slice&amp; target)</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="function">ParsedInternalKey <span class="title">ikey</span><span class="params">(target, kMaxSequenceNumber, kTypeValue)</span></span>;</span><br><span class="line">    std::string encoded;</span><br><span class="line">    <span class="built_in">AppendInternalKey</span>(&amp;encoded, ikey);</span><br><span class="line">    iter_-&gt;<span class="built_in">Seek</span>(encoded);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SeekToFirst</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123; iter_-&gt;<span class="built_in">SeekToFirst</span>(); &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">SeekToLast</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123; iter_-&gt;<span class="built_in">SeekToLast</span>(); &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Next</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123; iter_-&gt;<span class="built_in">Next</span>(); &#125;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">Prev</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123; iter_-&gt;<span class="built_in">Prev</span>(); &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function">Slice <span class="title">key</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(<span class="built_in">Valid</span>());</span><br><span class="line">    ParsedInternalKey key;</span><br><span class="line">    <span class="keyword">if</span> (!<span class="built_in">ParseInternalKey</span>(iter_-&gt;<span class="built_in">key</span>(), &amp;key)) &#123;</span><br><span class="line">      status_ = Status::<span class="built_in">Corruption</span>(<span class="string">&quot;malformed internal key&quot;</span>);</span><br><span class="line">      <span class="keyword">return</span> <span class="built_in">Slice</span>(<span class="string">&quot;corrupted key&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> key.user_key;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function">Slice <span class="title">value</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> iter_-&gt;<span class="built_in">value</span>(); &#125;</span><br><span class="line">  <span class="function">Status <span class="title">status</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> status_.<span class="built_in">ok</span>() ? iter_-&gt;<span class="built_in">status</span>() : status_;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">private</span>:</span><br><span class="line">  <span class="keyword">mutable</span> Status status_;</span><br><span class="line">  Iterator* iter_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="ModelIter"><a href="#ModelIter" class="headerlink" title="ModelIter"></a>ModelIter</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ModelDB</span> :</span> <span class="keyword">public</span> DB &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">ModelIter</span> :</span> <span class="keyword">public</span> Iterator &#123;</span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">        <span class="built_in">ModelIter</span>(<span class="keyword">const</span> KVMap* map, <span class="keyword">bool</span> owned)</span><br><span class="line">            : <span class="built_in">map_</span>(map), <span class="built_in">owned_</span>(owned), <span class="built_in">iter_</span>(map_-&gt;<span class="built_in">end</span>()) &#123;&#125;</span><br><span class="line">        ~<span class="built_in">ModelIter</span>() <span class="keyword">override</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (owned_) <span class="keyword">delete</span> map_;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">bool</span> <span class="title">Valid</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> iter_ != map_-&gt;<span class="built_in">end</span>(); &#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">SeekToFirst</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123; iter_ = map_-&gt;<span class="built_in">begin</span>(); &#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">SeekToLast</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (map_-&gt;<span class="built_in">empty</span>()) &#123;</span><br><span class="line">            iter_ = map_-&gt;<span class="built_in">end</span>();</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            iter_ = map_-&gt;<span class="built_in">find</span>(map_-&gt;<span class="built_in">rbegin</span>()-&gt;first);</span><br><span class="line">        &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">Seek</span><span class="params">(<span class="keyword">const</span> Slice&amp; k)</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">        iter_ = map_-&gt;<span class="built_in">lower_bound</span>(k.<span class="built_in">ToString</span>());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">Next</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123; ++iter_; &#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">Prev</span><span class="params">()</span> <span class="keyword">override</span> </span>&#123; --iter_; &#125;</span><br><span class="line">        <span class="function">Slice <span class="title">key</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> iter_-&gt;first; &#125;</span><br><span class="line">        <span class="function">Slice <span class="title">value</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> iter_-&gt;second; &#125;</span><br><span class="line">        <span class="function">Status <span class="title">status</span><span class="params">()</span> <span class="keyword">const</span> <span class="keyword">override</span> </span>&#123; <span class="keyword">return</span> Status::<span class="built_in">OK</span>(); &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span>:</span><br><span class="line">        <span class="keyword">const</span> KVMap* <span class="keyword">const</span> map_;</span><br><span class="line">        <span class="keyword">const</span> <span class="keyword">bool</span> owned_;  <span class="comment">// Do we own map_</span></span><br><span class="line">        KVMap::const_iterator iter_;</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="reference"><a href="#reference" class="headerlink" title="reference"></a>reference</h2><p><a target="_blank" rel="noopener" href="https://web.archive.org/web/20120131105110/http://rdc.taobao.com/blog/cs/wp-content/plugins/leveldb%E5%AE%9E%E7%8E%B0%E8%A7%A3%E6%9E%90.pdf">https://web.archive.org/web/20120131105110/http://rdc.taobao.com/blog/cs/wp-content/plugins/leveldb%E5%AE%9E%E7%8E%B0%E8%A7%A3%E6%9E%90.pdf</a></p>
+<p><a target="_blank" rel="noopener" href="http://catkang.github.io/2017/01/17/leveldb-data.html">http://catkang.github.io/2017/01/17/leveldb-data.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.bookstack.cn/read/Leveldb-handbook/spilt.2.b308da3c3d01f3cd.md">https://www.bookstack.cn/read/Leveldb-handbook/spilt.2.b308da3c3d01f3cd.md</a></p>
+<p><a target="_blank" rel="noopener" href="https://izualzhy.cn/leveldb-block">https://izualzhy.cn/leveldb-block</a></p>
+<p><a target="_blank" rel="noopener" href="https://hardcore.feishu.cn/docs/doccnWaz1fjIxeyRosRTojk4irs">https://hardcore.feishu.cn/docs/doccnWaz1fjIxeyRosRTojk4irs</a></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2021-11-06-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(8)%20%E8%BF%AD%E4%BB%A3%E5%99%A8%20iterator/" title="leveldb源码分析(8) 迭代器 iterator">https://riverferry.site/2021-11-06-leveldb源码分析(8) 迭代器 iterator/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/leveldb/" rel="tag"><i class="fa fa-tags"></i> leveldb</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021-11-05-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(7)%20%E7%89%88%E6%9C%AC%E6%8E%A7%E5%88%B6%20version/" rel="prev" title="leveldb源码分析(7) 版本控制 version">
+      <i class="fa fa-chevron-left"></i> leveldb源码分析(7) 版本控制 version
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021-11-07-leveldb%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(9)%20%E5%AE%8C%E6%95%B4%E7%9A%84%E8%AF%BB%E5%8F%96%E6%B5%81%E7%A8%8B/" rel="next" title="leveldb源码分析(9) 完整的读取流程">
+      leveldb源码分析(9) 完整的读取流程 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81"><span class="nav-number">1.</span> <span class="nav-text">代码</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#MemTableIterator"><span class="nav-number">1.1.</span> <span class="nav-text">MemTableIterator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DBIter"><span class="nav-number">1.2.</span> <span class="nav-text">DBIter</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Version-LevelFileNumIterator"><span class="nav-number">1.3.</span> <span class="nav-text">Version::LevelFileNumIterator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TwoLevelIterator"><span class="nav-number">1.4.</span> <span class="nav-text">TwoLevelIterator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Block-Iter"><span class="nav-number">1.5.</span> <span class="nav-text">Block::Iter</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#EmptyIterator"><span class="nav-number">1.6.</span> <span class="nav-text">EmptyIterator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#MergingIterator"><span class="nav-number">1.7.</span> <span class="nav-text">MergingIterator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#KeyConvertingIterator"><span class="nav-number">1.8.</span> <span class="nav-text">KeyConvertingIterator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ModelIter"><span class="nav-number">1.9.</span> <span class="nav-text">ModelIter</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">2.</span> <span class="nav-text">reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : '7b380db30f199217b72c3890b3dd94ce',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>

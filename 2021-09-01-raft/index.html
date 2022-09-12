@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/river.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"riverferry.site","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="分布式系统通过复制状态机来解决分布式的容错。对于多副本，如何保持一致性是很难的。raft作为分布式共识算法来解决一致性问题。以前有过mit的实验总结，这篇对于概念做一个总结，用自己的语言复一下论文。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="raft">
+<meta property="og:url" content="https://riverferry.site/2021-09-01-raft/index.html">
+<meta property="og:site_name" content="TheRiver | blog">
+<meta property="og:description" content="分布式系统通过复制状态机来解决分布式的容错。对于多副本，如何保持一致性是很难的。raft作为分布式共识算法来解决一致性问题。以前有过mit的实验总结，这篇对于概念做一个总结，用自己的语言复一下论文。">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/raft-%E5%9B%BE1.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/raft-%E5%9B%BE4.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/raft-%E5%9B%BE6.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/raft-%E5%9B%BE8.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/raft-%E5%9B%BE10.png">
+<meta property="article:published_time" content="2021-09-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2022-09-12T16:24:32.293Z">
+<meta property="article:author" content="TheRiver">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/RiverFerry/picBed/master/raft-%E5%9B%BE1.png">
+
+<link rel="canonical" href="https://riverferry.site/2021-09-01-raft/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>raft | TheRiver | blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">TheRiver | blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">You have reached the world's edge, none but devils play past here</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/RiverFerry/RiverFerry.github.io" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="https://riverferry.site/2021-09-01-raft/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="TheRiver">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TheRiver | blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          raft
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-09-01 00:00:00" itemprop="dateCreated datePublished" datetime="2021-09-01T00:00:00+00:00">2021-09-01</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-12 16:24:32" itemprop="dateModified" datetime="2022-09-12T16:24:32+00:00">2022-09-12</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>3.2k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>3 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div class="note default">
+            <p>分布式系统通过复制状态机来解决分布式的容错。对于多副本，如何保持一致性是很难的。raft作为分布式共识算法来解决一致性问题。以前有过mit的实验总结，这篇对于概念做一个总结，用自己的语言复一下论文。</p>
+          </div>
+
+
+<a id="more"></a>
+
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/raft-%E5%9B%BE1.png"></p>
+<h3 id="paxos的优缺点"><a href="#paxos的优缺点" class="headerlink" title="paxos的优缺点"></a>paxos的优缺点</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">paxos的缺点：</span><br><span class="line"></span><br><span class="line">* 难以理解</span><br><span class="line">    * 单决策和多决策</span><br><span class="line">* 工程难以实现</span><br><span class="line">    * 论文缺乏细节，各种实现不一，并且没有公开</span><br><span class="line"></span><br><span class="line">对等的点对点的方式作为核心(也提议了一种弱领导人的方式提高性能)</span><br><span class="line"></span><br><span class="line">paxos算法本身被证明是正确可行的，但是工程实现遇到很多问题，需要对协议进行更改，最终导致实现的定制化的paxos的正确性没法证明了，比如chubby的实现</span><br><span class="line"></span><br><span class="line">优点：</span><br><span class="line">性能更好，可用性更高</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="raft特点"><a href="#raft特点" class="headerlink" title="raft特点"></a>raft特点</h3><p>raft一致性算法的特性：</p>
+<ul>
+<li>安全性保证</li>
+<li>可用性</li>
+<li>不依赖时序保证一致性</li>
+<li>小部分较慢的节点不会影响系统整体的性能</li>
+<li>日志不允许有空洞(如果两个日志在某一索引位置term任期号相同，则认为从头到该索引的所有日志都相同)</li>
+</ul>
+<p>raft的优点：</p>
+<ul>
+<li>工程实现简单</li>
+<li>易于理解</li>
+<li>操作的高效性</li>
+<li>状态的数量少，考虑的情况没那么复杂</li>
+</ul>
+<hr>
+<h3 id="领导人选举"><a href="#领导人选举" class="headerlink" title="领导人选举"></a>领导人选举</h3><p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/raft-%E5%9B%BE4.png"></p>
+<p>通过领导人保证日志的一致性，由领导人告诉节点日志条目应该放在日志中的位置，而不需要和其他节点进行商议。领导人失去连接后，新的领导人会被选出来。</p>
+<p>节点初始状态是跟随者，只能响应领导者和候选者的rpc,如果跟随者一段时间内都没有收到消息，则会给自己的term加一，然后发起选举，争取投票，这个过程可能产生3种结果</p>
+<p><strong>成为领导人</strong></p>
+<p>每一个服务器给一个任期最多只投一张票，按照先来先服务的原则，保证同一任期内最多有1个领导人。一旦获得了多数票，则切换自己的状态为领导人，并发送附加日志的rpc心跳包(日志内容为空)来维持自己的领导，组织其他的选举发生</p>
+<p><strong>其他节点成为领导人</strong></p>
+<p>作为候选者，收到了其他节点的附加rpc请求，该节点的任期号不小于自己的节点，则承认对方为领导人，自己切换回跟随者状态。如果对方的任期号比自己的小，则拒绝，继续收集选票。</p>
+<p><strong>一段时间内都没有领导人选举成功</strong></p>
+<p>当有多个候选者收集选票的时候，选票会被瓜分，以至于没有人成功获选直至超时后大家都给任期号加1，再次尝试选举。这个过程可能一直僵持下去。</p>
+<p>raft通过随机生成选举超时时间，来避免多个节点同时发起选举。解决这个问题。通过这种不确定性来保证算法的可理解性和正确性。</p>
+<hr>
+<h3 id="日志复制"><a href="#日志复制" class="headerlink" title="日志复制"></a>日志复制</h3><p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/raft-%E5%9B%BE6.png"></p>
+<p>由领导人接收客户端的日志，然后复制到集群中的其他节点，<strong>强制</strong>其他节点的日志和自己保持一致</p>
+<p>日志由日志的<code>索引</code>，<code>任期号</code>，<code>指令</code>组成。领导人发送附加日志rpc给其他节点，当大多数节点都将该日志复制成功，领导人将该日志状态设为已提交，已提交的会被持久化，并保证所有节点最终都会应用该日志。已提交日志之前的所有日志也认为是已提交的。</p>
+<p>raft维护着以下特性：</p>
+<ul>
+<li>如果不同的日志中的两个日志条目拥有相同的索引号和任期号，那么他们存储了相同的指令</li>
+<li>如果不同的日志中的两天日志条目拥有相同的索引号和任期号，那么他们前面的所有日志是相同的</li>
+</ul>
+<p>第一个特性是这样保证的：</p>
+<p>一个任期最多只会有1个领导人，所有相同任期的领导人是相同的。然后领导人只会增加日志(跟随者可能会覆盖老的日志)，不会删除修改老的日志，一个索引位置的日志是不会改变的。</p>
+<p>第二个特性是这样保证的：</p>
+<p>每一个附加日志rpc都会额外发送前一个日志的索引和任期号，当跟随者发现自己的prev日志的索引和任期号对不上则会拒绝接收新的日志条目，领导者需要再返回更老的日志条目来让跟随着对齐(通过领导者给每一个跟随者维护一个nextindex)。即s(n) = t(n), 且s(n-1) = t(n-1), 则[0,n]上s和t是一样的</p>
+<hr>
+<h3 id="安全性"><a href="#安全性" class="headerlink" title="安全性"></a>安全性</h3><p>如果一个服务器节点已经应用了一个<strong>确定</strong>的日志条目到它的状态机中，那么其他的服务器节点不能在同一个日志索引位置应用一个不同的指令。</p>
+<p>由于领导人只追加日志，不会修改删除自己的老的日志，并通过强制其他节点和自己保持一致来保证整体的一致性，所以领导人自己需要有<strong>领导人完整特性</strong>的保证，确保选举出来的领导人，<strong>拥有自己任期之前的所有已提交的日志</strong>。这需要一些特性来保证，如下：</p>
+<p><strong>选举限制</strong>：选举需要获得大多数节点的选票，日志的提交也需要大多数节点的确认，所以如果一个节点成功当选领导人，那么它肯定不会被拥有最新提交日志的节点拒绝。从而保证自己拥有最新的提交日志。选举的时候，候选者会在rpc中带上自己的最新的日志，跟随者/候选者会比对自身的日志，如果收到的日志比自己的旧，则不会同意当选，新的定义是：</p>
+<ul>
+<li>如果任期不一样，则任期大的是新的</li>
+<li>如果任期一样，则日志长的(日志索引更大的)是新的</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/raft-%E5%9B%BE8.png"></p>
+<p><strong>领导人提交自己任期内的日志</strong>： 领导人拥有的老的任期内的日志，即使在大多数节点上保存了，也不能确保该日志是已经提交的，这里，<strong>领导人只能对自己任期内的日志通过大多数确认来提交</strong>。就是说领导人通过限制计算自己任期内的日志的大多数节点来维持的已提交状态，可以保证自己这个日志之前的所有在自己机器上的老的日志，也是已提交的(大多数写了)</p>
+<hr>
+<h3 id="成员变更"><a href="#成员变更" class="headerlink" title="成员变更"></a>成员变更</h3><p>如果跟随者或者候选者崩溃了，raft通过无限的重试来解决，这里raft的rpc请求保证都是幂等(全局的序列号)的，所以重试不会有问题。</p>
+<hr>
+<h3 id="集群变化"><a href="#集群变化" class="headerlink" title="集群变化"></a>集群变化</h3><p>这个挺复杂的，简单记录下，后面看看源码实现再分析。</p>
+<p><img src="https://raw.githubusercontent.com/RiverFerry/picBed/master/raft-%E5%9B%BE10.png"></p>
+<p>首先这里存在出现2个相同任期下的不同领导人问题：</p>
+<p>这里有个前提是lerder可以拿到新加入节点的信息，集群总数也会更新，然后这里出现问题的一种场景：</p>
+<ul>
+<li>s3作为old的leader(term=1),在集群新增了s4/s5后，s3宕机</li>
+<li>然后s1通过term=2拿到了s1/s2的选票成为leader.</li>
+<li>s3恢复，用term=2拿到了S4/s5的选票成为leader</li>
+<li>s1和s3都是leader,并且term相同</li>
+</ul>
+<p>论文中提到了2阶段的方案，通过共同一致来实现：</p>
+<ul>
+<li>old的集群拥有old的配置，比如(123)</li>
+<li>新的集群拥有新的配置，比如(4,5)</li>
+<li>s3的配置是(123-45)</li>
+</ul>
+<p>s3需要同步(123-45给其他节点)，提交成功后，再提交一个(12345)给所有节点，这时候第二阶段下才是新的集群完全生效的时候，如果s3提交(12345)前失败了，对于new(45)的节点，不能单独依赖自己单一节点的大多数来选举，只有old和接收old-new的节点可以当选。</p>
+<p>以后再补充吧</p>
+<hr>
+<h3 id="日志压缩"><a href="#日志压缩" class="headerlink" title="日志压缩"></a>日志压缩</h3><p>时间久了日志太占空间了，可以对已经提交的持久化了的日志进行压缩，这个不需要领导人协调，因为已提交日志本身就是领导人确认的，这里可以通过lsm树做日志的压缩，还需要保存压缩日志最后的索引和任期号，用于后续日志的同步。如果作为领导人，有节点日志落后太多，也可以发送快照给他来同步。</p>
+<hr>
+<h3 id="客户端交互"><a href="#客户端交互" class="headerlink" title="客户端交互"></a>客户端交互</h3><p>客户端随机发给一个节点，如果该节点不是领导人则会重定向到领导人，如果领导人崩溃了，则会超时，后面重新选举。</p>
+<p>如果领导人提交了日志，但是响应客户端前崩溃了，客户端可能重新提交请求，导致新的领导人再次执行了。这里需要做幂等处理，可能的方案是用<strong>全局的序列号</strong>。</p>
+<p><strong>脏数据问题</strong>？对于只读的请求，领导人可能已经被废弃了，这时候可能返回脏数据给客户端，raft是这样处理的:</p>
+<ul>
+<li>领导人返回只读请求前，先发一个空的提交日志给其他节点，保证自己前面的日志都被大多数节点持久化为已提交，考虑前面那个图，4任期日志前面的2只有在附加4的时候，才能保证2都被写提交。就是说领导人只能提交自己当前任期内的大多数日志，所以需要当前任期由日志写才能保证老的日志真的已提交了</li>
+<li>第二点是返回只读请求前，领导人需要和大多数节点确认下，自己是不是最新的唯一的领导人，这个可以通过心跳包来确认(给大多数节点心跳来确认)，也可以通过租约机制？</li>
+</ul>
+<h3 id="reference"><a href="#reference" class="headerlink" title="reference"></a>reference</h3><p><a target="_blank" rel="noopener" href="https://github.com/maemual/raft-zh_cn/blob/master/raft-zh_cn.md">https://github.com/maemual/raft-zh_cn/blob/master/raft-zh_cn.md</a></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>TheRiver
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://riverferry.site/2021-09-01-raft/" title="raft">https://riverferry.site/2021-09-01-raft/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021-06-23-1504%20Count%20Submatrices%20With%20All%20Ones%20copy/" rel="prev" title="1504 Count Submatrices With All Ones">
+      <i class="fa fa-chevron-left"></i> 1504 Count Submatrices With All Ones
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021-09-03-%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C/" rel="next" title="一致性哈希">
+      一致性哈希 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  
+   <div>
+     <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------- ending -----------</span>
+    </div>
+  
+</div>
+
+   </div>
+ 
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#paxos%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9"><span class="nav-number">1.</span> <span class="nav-text">paxos的优缺点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#raft%E7%89%B9%E7%82%B9"><span class="nav-number">2.</span> <span class="nav-text">raft特点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A2%86%E5%AF%BC%E4%BA%BA%E9%80%89%E4%B8%BE"><span class="nav-number">3.</span> <span class="nav-text">领导人选举</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E5%A4%8D%E5%88%B6"><span class="nav-number">4.</span> <span class="nav-text">日志复制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E5%85%A8%E6%80%A7"><span class="nav-number">5.</span> <span class="nav-text">安全性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%88%90%E5%91%98%E5%8F%98%E6%9B%B4"><span class="nav-number">6.</span> <span class="nav-text">成员变更</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9B%86%E7%BE%A4%E5%8F%98%E5%8C%96"><span class="nav-number">7.</span> <span class="nav-text">集群变化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E5%8E%8B%E7%BC%A9"><span class="nav-number">8.</span> <span class="nav-text">日志压缩</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BA%A4%E4%BA%92"><span class="nav-number">9.</span> <span class="nav-text">客户端交互</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#reference"><span class="nav-number">10.</span> <span class="nav-text">reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="TheRiver"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">TheRiver</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TheRiver</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">1.1m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">17:09</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+<script>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '828d98635e4048805831',
+      clientSecret: 'cdf9f70acdfbecd65e89bc3a8c2954be1af2ee01',
+      repo        : 'gitalk',
+      owner       : 'RiverFerry',
+      admin       : ['RiverFerry'],
+      id          : '842a9775ffd0f1f4ef1b0f2e5dedd1e0',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/ Relative)","tagMode":false,"log":false,"model":{"scale":1,"hHeadPos":0.5,"vHeadPos":0.618,"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"left","width":300,"height":800,"hOffset":20,"vOffset":20},"mobile":{"show":false,"scale":0.5},"react":{"opacityDefault":0.7,"opacityOnHover":0.2}});</script></body>
+</html>
